@@ -27,7 +27,7 @@ func NewCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "audit",
-		Short: "Audit TPM endorsement key certificate against trusted manufacturers",
+		Short: "audit TPM's EK certificate against trusted manufacturers roots CAs",
 		Long: `Ensure that a TPM is legitimate by verifying its Endorsement Key (EK)
 certificate against a trust bundle of known TPM manufacturers.
 
