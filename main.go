@@ -41,7 +41,7 @@ certificate against a trusted bundle of TPM manufacturer root certificates.`,
 
 func buildVersion(version, builtBy string) goversion.Info {
 	return goversion.GetVersionInfo(
-		goversion.WithAppDetails("tpmtb", "TPM root of trust, simplified.", website),
+		goversion.WithAppDetails("tpm-trust", "a tool that will tell you if your TPM is genuine.", website),
 		func(i *goversion.Info) {
 			if version != "" {
 				i.GitVersion = version
