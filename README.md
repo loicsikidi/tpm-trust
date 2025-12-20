@@ -19,14 +19,6 @@ This project demonstrates the utility of [tpm-ca-certificates](https://github.co
 - 🔒 **Revocation Checking**: `tpm-trust` will by default check if a certificate in EK's chain has been revoked
 - 🪶 **Zero Additional Dependencies**: install `tpm-trust` and you are ready to go!
 
-## Requirements
-
-- **Platform**: Linux with TPM 2.0
-- **Internet Connection** (for initial setup):
-  - Download and verify the trust bundle from `tpm-ca-certificates`
-  - Fetch CRLs (if revocation checking is enabled)
-  - Download intermediate certificates (if needed)
-
 ## Demo
 
 ![](cli.gif)
@@ -138,6 +130,14 @@ tpm-trust audit --verbose
 ```bash
 tpm-trust version
 ```
+
+## Requirements
+
+- **Platform**: Linux with TPM 2.0
+- **Internet Connection** (for initial setup):
+  - Download and verify the trust bundle from `tpm-ca-certificates`
+  - Fetch CRLs (if revocation checking is enabled)
+  - Download intermediate certificates (if needed)
 
 ## Known Limitations
 
