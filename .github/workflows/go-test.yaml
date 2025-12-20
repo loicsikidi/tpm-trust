@@ -24,9 +24,9 @@ jobs:
           - latest
         # Exclude (oldstable, latest) and (go.mod, latest)
         # root cause: latest version of boulder requires Go 1.25.0
-        exclude:
-          - go: { go-version: oldstable }
-            deps: latest
+        # exclude:
+          # - go: { go-version: oldstable }
+          #   deps: latest
           # - go: { go-version-file: go.mod }
           #   deps: latest
     steps:
