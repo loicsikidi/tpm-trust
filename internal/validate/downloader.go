@@ -31,6 +31,7 @@ type downloader struct {
 	timeout      time.Duration
 }
 
+//nolint:unused // used in future implementation
 type intelEKCertResponse struct {
 	Pubhash     string `json:"pubhash"`
 	Certificate string `json:"certificate"`
@@ -114,7 +115,7 @@ func (d *downloader) downloadCRLSigner(ctx context.Context, url *url.URL) (*x509
 }
 
 // downloadEKCertificate attempts to download the EK certificate from ekURL.
-func (d *downloader) downloadEKCertificate(ctx context.Context, ekURL *url.URL) (*x509.Certificate, error) {
+func (d *downloader) downloadEKCertificate(ctx context.Context, ekURL *url.URL) (*x509.Certificate, error) { //nolint:unused // used in future implementation
 	if !d.enabled {
 		// if downloads are disabled, don't try to download at all
 		return nil, ErrDownloaderDisabled

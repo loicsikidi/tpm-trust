@@ -94,7 +94,7 @@ Please open an issue to request its inclusion:
 https://github.com/loicsikidi/tpm-ca-certificates/issues/new
 `).
 			Error("unsupported manufacturer")
-		return internal.SilenceErr
+		return internal.ErrSilence
 	}
 
 	logger.IncreasePadding()
@@ -117,7 +117,7 @@ https://github.com/loicsikidi/tpm-ca-certificates/issues/new
 		SkipRevocationCheck: opts.skipRevocationCheck,
 	}
 	if err := checker.Check(checkCfg); err != nil {
-		return internal.SilenceErr
+		return internal.ErrSilence
 	}
 	logutil.LogDuration(logger, startValidate)
 

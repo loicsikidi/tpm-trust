@@ -95,6 +95,9 @@ func search(logger *log.Logger, tpm *attest.TPM) (endorsement.EK, error) {
 	case len(templates) >= 1:
 		logger.Debugf("found %d persisted handle(s)", len(templates))
 		ek, errGet = tpm.EK(attest.GetEKCertConfig{Template: templates[0]})
+		if errGet != nil {
+			return endorsement.EK{}, fmt.Errorf("failed to get EK from persisted handle: %w", errGet)
+		}
 	case len(templates) == 0:
 		logger.Debug("no persisted handles found")
 		logger.Debug("must generate associated EK key pair in TPM")
@@ -129,11 +132,11 @@ generation is computationally expensive.`).
 // It returns a string describing the key algorithm and size (e.g., "rsa2048", "ecc-nist-p256").
 // Returns "unknown" for unsupported key types.
 func findKeyType(public tpm2.TPMTPublic) string {
-	switch {
-	case public.Type == tpm2.TPMAlgRSA:
+	switch public.Type {
+	case tpm2.TPMAlgRSA:
 		rsaDetails, _ := public.Parameters.RSADetail()
 		return fmt.Sprintf("rsa%d", rsaDetails.KeyBits)
-	case public.Type == tpm2.TPMAlgECC:
+	case tpm2.TPMAlgECC:
 		eccDetails, _ := public.Parameters.ECCDetail()
 		var curveName string
 		switch eccDetails.CurveID {

@@ -28,7 +28,7 @@ func NeedsElevation() bool {
 	if err != nil {
 		return true
 	}
-	file.Close()
+	_ = file.Close()
 	return false
 }
 

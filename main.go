@@ -31,7 +31,7 @@ func main() {
 	rootCmd.AddCommand(versionCmd.NewCommand(buildVersion(version, builtBy)))
 
 	if err := rootCmd.Execute(); err != nil {
-		if !errors.Is(err, internal.SilenceErr) {
+		if !errors.Is(err, internal.ErrSilence) {
 			log.WithError(err).Error("command failed")
 		}
 		os.Exit(1)
