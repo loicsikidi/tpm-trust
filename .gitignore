@@ -1,0 +1,51 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Dependency directories
+vendor/
+
+# Go workspace file
+go.work
+
+# Build artifacts
+dist/
+vendors/
+tpm-trust
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# pre-commit
+.pre-commit-config.yaml
+
+# IA assistants
+.claude/
+GOAL.md
+
+# nix
+result
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+
+# direnv
+.direnv/
