@@ -1,0 +1,115 @@
+version: 2
+
+project_name: tpm-trust
+
+builds:
+  - id: tpm-trust
+    main: ./
+    binary: tpm-trust
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X main.builtBy=goreleaser
+
+archives:
+  - id: tpm-trust-archives
+    ids:
+      - tpm-trust
+    formats: [ 'tar.gz' ]
+    name_template: "tpm-trust_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+sboms:
+  - artifacts: archive
+  - id: source
+    artifacts: source
+
+# Signature in Sigstore bundle format
+signs:
+  - id: cosign-checksum
+    cmd: cosign
+    signature: "${artifact}.sigstore.json"
+    args:
+      - "sign-blob"
+      - "--bundle=${signature}"
+      - "${artifact}"
+      - "--yes"
+    artifacts: checksum
+
+release:
+  github:
+    owner: loicsikidi
+    name: "{{ .ProjectName }}"
+  draft: true
+  prerelease: auto
+  mode: append
+  header: |
+    ## {{ .ProjectName }} {{ .Tag }}
+
+    ### What's Changed
+
+    This release contains the `tpm-trust` binary and OCI images built from commit [{{ .FullCommit }}](https://github.com/loicsikidi/{{ .ProjectName }}/tree/{{ .FullCommit }}).
+
+    ### Artifacts
+
+    - **`tpm-trust_$VERSION_$OS_$ARCH.$EXTENSION`** - CLI binaries for various platforms (stored in archives)
+    - **`tpm-trust_$VERSION_$OS_$ARCH.$EXTENSION.sbom.json`** - SBOMs for the binaries in SPDX format
+    - **`checksums.txt`** - SHA-256 checksums of all artifacts
+    - **`checksums.txt.sigstore.json`** - Sigstore signature bundle for checksum verification
+
+    ### Verification
+
+    > [!IMPORTANT]
+    > If you are not familiar with the concepts around software supply chain security,
+    > (eg. build provenance attestation, keyless signature, etc.), please read the following resources first:
+    > - [Cosign Signing Overview](https://docs.sigstore.dev/cosign/signing/overview/)
+    > - [SLSA provenance attestation](https://slsa.dev/spec/v1.2/provenance)
+    > - [GitHub attest-build-provenance action](https://github.com/actions/attest-build-provenance)
+
+    For complete security verification, follow this two-step process:
+
+    **Step 1: Verify Integrity with Cosign**
+
+    First, verify the **integrity** of the checksums file using Cosign:
+
+    > [!TIP]
+    > Make sure to use **`cosign >= v2.4.3`** to support the [Sigstore bundle format](https://docs.sigstore.dev/about/bundle/).
+
+    ```bash
+    # Verify the checksums signature
+    cosign verify-blob \
+      --bundle checksums.txt.sigstore.json \
+      --certificate-identity-regexp 'https://github.com/loicsikidi/{{ .ProjectName }}/.github/workflows/release.yaml@refs/tags/{{ .Tag }}' \
+      --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+      checksums.txt
+
+    # Verify any artifact matches the checksum
+    sha256sum -c checksums.txt
+    ```
+
+    **Step 2: Verify Provenance with GitHub CLI**
+
+    Once the checksum integrity is established, verify the **provenance** using GitHub's attestation system:
+
+    ```bash
+    # Verify the archive
+    gh attestation verify tpm-trust_{{ .Version }}_linux_amd64.tar.gz --repo loicsikidi/{{ .ProjectName }}
+    ```
+  footer: |
+    **Generated with GoReleaser 🚀**
+
+changelog:
+  use: github
+  sort: asc
+  filters:
+    exclude:
+      - '^docs'
+      - '^test'
