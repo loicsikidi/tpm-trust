@@ -2,6 +2,10 @@
 
 A command-line tool to verify the authenticity of a TPM (Trusted Platform Module) by validating its Endorsement Key (EK) certificate against a trusted bundle of TPM manufacturer root certificates.
 
+> [!IMPORTANT]
+> This tool is in early stage and it's quite difficult to test it on various hardware.
+> That's why I would highly appreciate any feedback from users, don't hesitate to open [issues](https://github.com/loicsikidi/tpm-trust/issues/new) if you encounter any problems or have suggestions!
+
 ## Motivation
 
 This project demonstrates the utility of [tpm-ca-certificates](https://github.com/loicsikidi/tpm-ca-certificates), which provides a single bundle centralizing TPM manufacturer root certificates, making TPM validation straightforward and secure.
