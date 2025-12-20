@@ -21,9 +21,10 @@ var (
 
 func main() {
 	rootCmd := &cobra.Command{
-		Use:           "tpm-trust",
-		Short:         "",
-		Long:          ``,
+		Use:   "tpm-trust",
+		Short: "verify TPM authenticity using hardware certificates",
+		Long: `tpm-trust verifies the authenticity of a TPM by validating its Endorsement Key (EK) 
+certificate against a trusted bundle of TPM manufacturer root certificates.`,
 		SilenceErrors: true,
 	}
 
