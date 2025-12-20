@@ -115,6 +115,8 @@ func (d *downloader) downloadCRLSigner(ctx context.Context, url *url.URL) (*x509
 }
 
 // downloadEKCertificate attempts to download the EK certificate from ekURL.
+//
+//lint:ignore U1000 used in future implementation
 func (d *downloader) downloadEKCertificate(ctx context.Context, ekURL *url.URL) (*x509.Certificate, error) { //nolint:unused // used in future implementation
 	if !d.enabled {
 		// if downloads are disabled, don't try to download at all

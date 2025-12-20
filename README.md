@@ -7,7 +7,7 @@ A command-line tool to verify the authenticity of a TPM (Trusted Platform Module
 This project demonstrates the utility of [tpm-ca-certificates](https://github.com/loicsikidi/tpm-ca-certificates), which provides a single bundle centralizing TPM manufacturer root certificates, making TPM validation straightforward and secure.
 
 > [!NOTE]
-> If you want to know how security is ensured, please read [tpm-ca-certificates's core concepts](https://github.com/loicsikidi/tpm-ca-certificates/tree/main/docs#-core-concepts)*
+> *If you want to know how security is ensured, please read [tpm-ca-certificates's core concepts](https://github.com/loicsikidi/tpm-ca-certificates/tree/main/docs#-core-concepts)*
 
 ## Primitives
 
@@ -98,9 +98,7 @@ tpm-trust completion fish | source
 tpm-trust completion fish > ~/.config/fish/completions/tpm-trust.fish
 ```
 
-> [!NOTE]
-> When installing via Nix, shell completions are automatically installed to the appropriate directories and should work out of the box.
-
+*Note: when installing via Nix, shell completions are automatically installed to the appropriate directories and should work out of the box.*
 </details>
 
 ### Audit command
@@ -110,6 +108,9 @@ Verify your TPM's authenticity:
 ```bash
 tpm-trust audit
 ```
+
+> [!TIP]
+> If TPM device needs a **sudo** access, the CLI will ask for elevated permissions 💫.
 
 #### Skip Revocation Check
 
@@ -124,7 +125,7 @@ tpm-trust audit --skip-revocation-check
 Enable detailed logging to see each validation step:
 
 ```bash
-sudo tpm-trust audit --verbose
+tpm-trust audit --verbose
 ```
 
 #### Exit Codes
@@ -147,7 +148,11 @@ tpm-trust version
   - If you have AMD/Intel hardware and would like to help test this feature, please [open an issue](https://github.com/loicsikidi/tpm-trust/issues/new) or contact me directly via mail at `rat_9_epics@icloud.com`
 - `tpm-ca-certificates` currently only supports a limited set of TPM manufacturers. Check its documentation [here](https://github.com/loicsikidi/tpm-ca-certificates/tree/main/src#vendor-index) for the latest supported vendors.
   * If you need support for a specific TPM manufacturer, please open [an issue](https://github.com/loicsikidi/tpm-ca-certificates/issues/new) in the `tpm-ca-certificates` repository.
-  * Tip: you won't need to update `tpm-trust` to get newest bundle version. Internally, `tpm-trust` uses `tpm-ca-certificates` library to always get the latest trust bundle.
+
+> [!TIP]
+> You won't need to update `tpm-trust` to get newest bundle version.
+>
+> *Why?* Internally, `tpm-trust` uses `tpm-ca-certificates` library to always get the latest trust bundle.
 
 ## Development
 
