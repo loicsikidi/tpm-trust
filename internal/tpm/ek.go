@@ -38,7 +38,7 @@ func GetEKCertificate(cfg TPMConfig) (*EKResponse, error) {
 	defer logger.ResetPadding()
 
 	logger.Debug("open connection to TPM")
-	tpm, err := attest.OpenTPM(nil)
+	tpm, err := attest.OpenTPM()
 	if err != nil {
 		return nil, fmt.Errorf("failed to open TPM: %w", err)
 	}
