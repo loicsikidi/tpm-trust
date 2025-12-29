@@ -133,23 +133,14 @@ func (c *ekchecker) Check(cfg CheckConfig) error {
 		}
 	}
 
-	intermediates := x509.NewCertPool()
+	// TODO(lsikidi): create dynamic intermediate pool if the issuers is not yet supported
+	// in the trusted bundle?
 	for _, issuer := range filterIntermediates(issuers) {
-		intermediates.AddCert(issuer)
+		if !c.tb.Contains(issuer) {
+			c.logger.WithField("subject", issuer.Subject.String()).Debug("missing cert in trusted bundle")
+		}
 	}
-
-	// Copy the EK certificate and mark all critical extensions as handled
-	// to work around TPM-specific OIDs that x509 doesn't recognize
-	ekCopy := *cfg.EK
-	ekCopy.UnhandledCriticalExtensions = nil
-
-	opts := x509.VerifyOptions{
-		Roots:         c.tb.GetRoots(),
-		Intermediates: intermediates,
-		// TPM EK certificates don't have standard key usages, so we need to allow any usage
-		KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
-	}
-	if _, err := ekCopy.Verify(opts); err != nil {
+	if err := c.tb.VerifyCertificate(cfg.EK); err != nil {
 		c.logger.WithError(err).Debug("certificate verification error")
 		c.logger.WithField("status", "untrusted").
 			Error("certificate")

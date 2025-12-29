@@ -7,7 +7,7 @@ require (
 	github.com/caarlos0/log v0.5.3
 	github.com/google/go-tpm v0.9.8-0.20251124160146-9312d3e61676
 	github.com/loicsikidi/attest v0.3.0
-	github.com/loicsikidi/tpm-ca-certificates v0.4.1
+	github.com/loicsikidi/tpm-ca-certificates v0.6.0
 	github.com/spf13/cobra v1.10.2
 )
 

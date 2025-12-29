@@ -262,8 +262,8 @@ github.com/loicsikidi/attest v0.3.0 h1:2zS/Ynu+LqNw36qavuxK9K1WRDYDmENbAWD2HqSp6
 github.com/loicsikidi/attest v0.3.0/go.mod h1:ZpBqMjLd0W3ixiZ+21KPyIkteWZ27qsKAkakHlGClfk=
 github.com/loicsikidi/go-tpm-kit v0.2.0 h1:b38QC3W7RDC9HMWV5m2zjJ8TJzKq/psK4YV1xgiBvlQ=
 github.com/loicsikidi/go-tpm-kit v0.2.0/go.mod h1:wiGEBo+Uo034XhPorTa6qF0ha3SJ8sYbVqn4S4GZH5I=
-github.com/loicsikidi/tpm-ca-certificates v0.4.1 h1:BLVWTTquzoOGOniHZVo6XOIr8YSlU7DgPHphqnLQm1I=
-github.com/loicsikidi/tpm-ca-certificates v0.4.1/go.mod h1:NGaT9n4xAD3DOzetKnM9Zkxqml/bdTb5BKwMI4dbRjE=
+github.com/loicsikidi/tpm-ca-certificates v0.6.0 h1:7n19Z5bkHZCfPPFamLHOrd+VEfZCwSOlHX71E0T7eSA=
+github.com/loicsikidi/tpm-ca-certificates v0.6.0/go.mod h1:NGaT9n4xAD3DOzetKnM9Zkxqml/bdTb5BKwMI4dbRjE=
 github.com/lucasb-eyer/go-colorful v1.3.0 h1:2/yBRLdWBZKrf7gB40FoiKfAWYQ0lqNcbuQwVHXptag=
 github.com/lucasb-eyer/go-colorful v1.3.0/go.mod h1:R4dSotOR9KMtayYi1e77YzuveK+i7ruzyGqttikkLy0=
 github.com/mattn/go-runewidth v0.0.19 h1:v++JhqYnZuu5jSKrk9RbgF5v4CGUjqRfBm05byFGLdw=
