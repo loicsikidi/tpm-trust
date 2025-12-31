@@ -106,7 +106,7 @@ tpm-trust audit
 ```
 
 > [!TIP]
-> If TPM device needs a **sudo** access, the CLI will ask for elevated permissions 💫.
+> If TPM device needs a privilege access, the CLI will ask for elevated permissions 💫.
 
 #### Skip Revocation Check
 
@@ -145,9 +145,8 @@ tpm-trust version
 
 ## Known Limitations
 
-- **Platform Support**: Only Linux with TPM 2.0 is currently supported
+- **Platform Support**: Only TPM 2.0 is currently supported
   - I don't plan to support TPM 1.2 as it's largely obsolete
-  - Windows support is planned for a future release
 - **External EK Certificate URLs**: AMD and Intel TPMs that store EK certificates externally (via URL) are not yet supported due to lack of test hardware
   - If you have AMD/Intel hardware and would like to help test this feature, please [open an issue](https://github.com/loicsikidi/tpm-trust/issues/new) or contact me directly via mail at `rat_9_epics@icloud.com`
 - `tpm-ca-certificates` currently only supports a limited set of TPM manufacturers. Check its documentation [here](https://github.com/loicsikidi/tpm-ca-certificates/tree/main/src#vendor-index) for the latest supported vendors.
@@ -169,7 +168,7 @@ nix-shell
 This will set up a development environment with all required dependencies.
 
 > [!TIP]
-> This will also add git hooks thanks to [githooks.nix](https://github.com/cachix/git-hooks.nix).
+> This will also add git hooks thanks to [git-hooks.nix](https://github.com/cachix/git-hooks.nix).
 
 ### Building
 
