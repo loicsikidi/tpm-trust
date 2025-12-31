@@ -169,7 +169,7 @@ nix-shell
 This will set up a development environment with all required dependencies.
 
 > [!TIP]
-> This will also add git hooks thanks to [githooks.nix](https://github.com/cachix/git-hooks.nix).
+> This will also add git hooks thanks to [git-hooks.nix](https://github.com/cachix/git-hooks.nix).
 
 ### Building
 

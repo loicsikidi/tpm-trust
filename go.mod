@@ -5,10 +5,11 @@ go 1.25.0
 require (
 	github.com/caarlos0/go-version v0.2.2
 	github.com/caarlos0/log v0.5.3
-	github.com/google/go-tpm v0.9.8-0.20251124160146-9312d3e61676
-	github.com/loicsikidi/attest v0.3.0
+	github.com/google/go-tpm v0.9.8
+	github.com/loicsikidi/attest v0.4.0
 	github.com/loicsikidi/tpm-ca-certificates v0.6.0
 	github.com/spf13/cobra v1.10.2
+	golang.org/x/sys v0.39.0
 )
 
 require (
@@ -92,7 +93,6 @@ require (
 	golang.org/x/mod v0.31.0 // indirect
 	golang.org/x/net v0.48.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
-	golang.org/x/sys v0.39.0 // indirect
 	golang.org/x/term v0.38.0 // indirect
 	golang.org/x/text v0.32.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20251213004720-97cd9d5aeac2 // indirect
