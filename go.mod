@@ -10,6 +10,7 @@ require (
 	github.com/loicsikidi/tpm-ca-certificates v0.6.1-0.20260112223017-669c34f6b452
 	github.com/smallstep/certinfo v1.15.0
 	github.com/spf13/cobra v1.10.2
+	golang.org/x/sys v0.39.0
 )
 
 require (
@@ -93,7 +94,6 @@ require (
 	golang.org/x/mod v0.31.0 // indirect
 	golang.org/x/net v0.48.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
-	golang.org/x/sys v0.39.0 // indirect
 	golang.org/x/term v0.38.0 // indirect
 	golang.org/x/text v0.32.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20251213004720-97cd9d5aeac2 // indirect

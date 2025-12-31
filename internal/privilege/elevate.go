@@ -1,66 +1,35 @@
+//go:build linux || windows
+
 package privilege
 
-import (
-	"fmt"
-	"os"
-	"os/exec"
-	"syscall"
+// platformImpl contains platform-specific implementations for privilege elevation.
+type platformImpl struct {
+	needsElevation func() bool
+	elevate        func() error
+}
 
-	"github.com/caarlos0/log"
-)
-
-const (
-	tpmDevicePath = "/dev/tpmrm0"
-)
+// platform is initialized in elevate_linux.go or elevate_windows.go via init().
+var platform platformImpl
 
 // NeedsElevation checks if the current process needs privilege elevation
 // to access the TPM device.
+//
+// On Linux, this checks if the process can access /dev/tpmrm0.
+// On Windows, this checks if the process has elevated (administrator) privileges.
 func NeedsElevation() bool {
-	if os.Geteuid() == 0 {
-		return false
-	}
-
-	if _, err := os.Stat(tpmDevicePath); err != nil {
-		return true
-	}
-
-	file, err := os.OpenFile(tpmDevicePath, os.O_RDWR, 0)
-	if err != nil {
-		return true
-	}
-	_ = file.Close()
-	return false
+	return platform.needsElevation()
 }
 
-// Elevate re-executes the current process with elevated privileges using sudo.
-// It preserves all command-line arguments and returns an error if elevation fails.
+// Elevate re-executes the current process with elevated privileges if necessary.
+//
+// On Linux, this uses sudo to re-execute the process.
+// On Windows, this triggers a UAC prompt to re-execute with administrator privileges.
+//
+// If elevation is successful, this function does not return as the current process
+// exits after spawning the elevated process.
 func Elevate() error {
 	if !NeedsElevation() {
 		return nil
 	}
-
-	log.Warn("TPM access requires elevated privileges, re-executing with sudo")
-
-	executable, err := os.Executable()
-	if err != nil {
-		return fmt.Errorf("failed to get executable path: %w", err)
-	}
-
-	args := append([]string{executable}, os.Args[1:]...)
-	cmd := exec.Command("sudo", args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
-
-	if err := cmd.Run(); err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			if status, ok := exitErr.Sys().(syscall.WaitStatus); ok {
-				os.Exit(status.ExitStatus())
-			}
-		}
-		return fmt.Errorf("failed to re-execute with sudo: %w", err)
-	}
-
-	os.Exit(0)
-	return nil
+	return platform.elevate()
 }

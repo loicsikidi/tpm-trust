@@ -9,6 +9,7 @@
     inherit pkgs;
     hooksConfig = {
       gotest.settings.flags = "-race";
+      golangci-lint.excludes = ["internal/windowsexec"];
     };
   };
 in
