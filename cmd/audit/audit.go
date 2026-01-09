@@ -90,7 +90,7 @@ func run(ctx context.Context, opts *options) error {
 		metadata := trustedBundle.GetRootMetadata()
 		logger.WithField("date", metadata.Date).
 			WithField("commit", metadata.Commit).
-			Debug("metadata")
+			Debug("bundle's metadata")
 		logger.Debugf("found %d vendors", len(trustedBundle.GetVendors()))
 		logger.IncreasePadding()
 		for _, v := range trustedBundle.GetVendors() {
