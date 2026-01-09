@@ -84,6 +84,15 @@ func run(ctx context.Context, opts *options) error {
 	logger.Info("Loading manufacturers trusted bundle")
 
 	if !slices.Contains(trustedBundle.GetVendors(), apiv1beta.VendorID(result.Manufacturer.ASCII)) {
+		metadata := trustedBundle.GetRootMetadata()
+		logger.WithField("date", metadata.Date).
+		   WithField("commit", metadata.Commit).
+		   Debug("metadata")
+		logger.Debugf("found %d vendors", len(trustedBundle.GetVendors()))
+	    for _, v := range trustedBundle.GetVendors() {
+			logger.WithField("id", v).
+				Debug("vendor")
+		}
 		logger.WithField("id", result.Manufacturer.ASCII).
 			WithField("reason", `unfortunately, this manufacturer
 is not included yet in 'tpm-ca-certificates' 🥹
