@@ -84,6 +84,7 @@ func run(ctx context.Context, opts *options) error {
 	logger.Info("Loading manufacturers trusted bundle")
 
 	if !slices.Contains(trustedBundle.GetVendors(), apiv1beta.VendorID(result.Manufacturer.ASCII)) {
+		logger.IncreasePadding()
 		metadata := trustedBundle.GetRootMetadata()
 		logger.WithField("date", metadata.Date).
 			WithField("commit", metadata.Commit).
@@ -94,6 +95,7 @@ func run(ctx context.Context, opts *options) error {
 			logger.WithField("id", v).
 				Debug("vendor")
 		}
+		logger.DecreasePadding()
 		logger.DecreasePadding()
 		logger.WithField("id", result.Manufacturer.ASCII).
 			WithField("reason", `unfortunately, this manufacturer
