@@ -15,6 +15,7 @@ import (
 	"github.com/loicsikidi/attest/info"
 
 	"github.com/loicsikidi/tpm-trust/internal/log"
+	"github.com/loicsikidi/tpm-trust/internal/logutil"
 	"github.com/loicsikidi/tpm-trust/internal/util"
 )
 
@@ -163,7 +164,7 @@ func SearchEKCertificate(cfg TPMConfig) (*EKResponse, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get TPM info: %w", err)
 	}
-	logger.WithField("id", info.Manufacturer.ASCII).Infof("manufacturer: %s", info.Manufacturer.Name)
+	logger.WithField("id", info.Manufacturer.ASCII).Infof("manufacturer: %q", info.Manufacturer.Name)
 
 	ek, err := search(logger, tpm)
 	if err != nil {
@@ -187,13 +188,13 @@ func search(logger log.Logger, tpm *attest.TPM) (endorsement.EK, error) {
 	if len(availableCerts) == 0 {
 		return endorsement.EK{}, fmt.Errorf("no EK certificates available in TPM")
 	}
-	logger.Infof("found %d EK certificate(s)", len(availableCerts))
-	logger.IncreasePadding()
-	for _, t := range availableCerts {
-		logger.WithField("kty", findKeyType(t.Public)).
-			Info("certificate")
-	}
-	logger.DecreasePadding()
+	logger.Infof("found %d EK certificate(s):", len(availableCerts))
+	logutil.LogWithPadding(logger, func() {
+		for _, t := range availableCerts {
+			logger.WithField("kty", findKeyType(t.Public)).
+				Info("certificate")
+		}
+	})
 
 	templates := tpm.PersistedEKs()
 	var (
@@ -202,7 +203,13 @@ func search(logger log.Logger, tpm *attest.TPM) (endorsement.EK, error) {
 	)
 	switch {
 	case len(templates) >= 1:
-		logger.Debugf("found %d persisted handle(s)", len(templates))
+		logger.Debugf("found %d persisted handle(s):", len(templates))
+		logutil.LogWithPadding(logger, func() {
+			for _, t := range templates {
+				logger.WithField("index", fmt.Sprintf("0x%X", t.Index)).
+					Debug("handle")
+			}
+		})
 		ek, errGet = tpm.EK(attest.GetEKCertConfig{Template: templates[0]})
 		if errGet != nil {
 			return endorsement.EK{}, fmt.Errorf("failed to get EK from persisted handle: %w", errGet)
@@ -233,8 +240,37 @@ generation is computationally expensive.`).
 		return endorsement.EK{}, fmt.Errorf("failed to get EK ECC cert: %w", errGet)
 	}
 	logger.WithField("issuer", ek.Certificate.Issuer).
-		Infof("select %s EK certificate", findKeyTypeFromCert(ek.Certificate))
+		Infof("select %s certificate", findKeyTypeFromCert(ek.Certificate))
 	return ek, nil
+}
+
+// findKeyType determines the key type from a [tpm2.TPMTPublic].
+// It returns a string describing the key algorithm and size (e.g., "rsa2048", "ecc-nist-p256").
+// Returns "unknown" for unsupported key types.
+func findKeyType(public tpm2.TPMTPublic) string {
+	switch public.Type {
+	case tpm2.TPMAlgRSA:
+		rsaDetails, _ := public.Parameters.RSADetail()
+		return fmt.Sprintf("rsa-%d", rsaDetails.KeyBits)
+	case tpm2.TPMAlgECC:
+		eccDetails, _ := public.Parameters.ECCDetail()
+		var curveName string
+		switch eccDetails.CurveID {
+		case tpm2.TPMECCSM2P256:
+			curveName = "sm2-p256"
+		case tpm2.TPMECCNistP256:
+			curveName = "nist-p256"
+		case tpm2.TPMECCNistP384:
+			curveName = "nist-p384"
+		case tpm2.TPMECCNistP521:
+			curveName = "nist-p521"
+		default:
+			curveName = "unknown"
+		}
+		return fmt.Sprintf("ecc-%s", curveName)
+	default:
+		return "unknown"
+	}
 }
 
 func getEK(tpm *attest.TPM, alg tpm2.TPMAlgID, availableCerts []attest.EKCertTemplate) (endorsement.EK, error) {

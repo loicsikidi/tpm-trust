@@ -13,6 +13,7 @@ import (
 	"github.com/loicsikidi/tpm-ca-certificates/pkg/apiv1beta"
 	"github.com/loicsikidi/tpm-trust/internal/log"
 	"github.com/loicsikidi/tpm-trust/internal/util"
+	"github.com/loicsikidi/tpm-trust/internal/logutil"
 )
 
 var (
@@ -113,6 +114,9 @@ func (c *ekchecker) Check(cfg CheckConfig) error {
 			return err
 		}
 	}
+	if err == nil {
+		c.checkForMissingCertsInTrustBundle(issuers, cfg.EK)
+	}
 
 	if !cfg.SkipRevocationCheck {
 		crlUrls, err := c.prepareUrls(cfg.EK.Certificate.CRLDistributionPoints)
@@ -148,11 +152,8 @@ func (c *ekchecker) Check(cfg CheckConfig) error {
 	}
 	if err := c.tb.VerifyCertificate(cfg.EK.Certificate); err != nil {
 		c.logger.WithError(err).Debug("certificate verification error")
-		c.logger.WithField("status", "untrusted").
-			Error("certificate")
 		return fmt.Errorf("%w: %v", ErrUntrustedCertificate, err)
 	}
-	c.logger.WithField("status", "trusted").Info("certificate")
 	return nil
 }
 
@@ -239,17 +240,34 @@ func filterIntermediates(pool []*x509.Certificate) []*x509.Certificate {
 		if !cert.IsCA {
 			return cert, false
 		}
-
-		if isSelfSigned(cert) {
-			return cert, false
-		}
-
-		if cert.KeyUsage&x509.KeyUsageCertSign == 0 {
-			return cert, false
-		}
-
 		return cert, true
 	})
+}
+
+// checkForMissingCertsInTrustBundle checks if any certificate in EK cert' chain is missing in the trusted bundle
+// in order to print warnings because verification will fail
+func (c *ekchecker) checkForMissingCertsInTrustBundle(issuers []*x509.Certificate, ek *x509.Certificate) {
+	certs := slices.Clone(issuers)
+	if isSelfSigned(ek) {
+		certs = append(certs, ek)
+	}
+
+	// TODO(lsikidi): create dynamic intermediate pool if the issuers is not yet supported
+	// in the trusted bundle?
+	for _, cert := range certs {
+		missingCerts := make([]string, 0)
+		if !c.tb.Contains(cert) {
+			missingCerts = append(missingCerts, cert.Subject.String())
+		}
+		if len(missingCerts) > 0 {
+			c.logger.Warn("verification will fail because some issuer certificates are missing in the trusted bundle")
+			logutil.LogWithPadding(c.logger, func() {
+				for _, missingCert := range missingCerts {
+					c.logger.WithField("subject", missingCert).Warn("certificate")
+				}
+			})
+		}
+	}
 }
 
 // isSelfSigned checks if a certificate is self-signed
