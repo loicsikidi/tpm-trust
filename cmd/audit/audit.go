@@ -2,6 +2,7 @@ package audit
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"slices"
@@ -72,7 +73,7 @@ func run(ctx context.Context, opts *options) error {
 	if err != nil {
 		return fmt.Errorf("failed to read EK certificate: %w", err)
 	}
-	logutil.LogDuration(logger, startRead)
+	logutil.LogDurationWithPadding(logger, startRead)
 
 	startLoad := time.Now()
 	cfg := apiv1beta.GetConfig{
@@ -85,6 +86,10 @@ func run(ctx context.Context, opts *options) error {
 		return fmt.Errorf("failed to get trusted bundle: %w", err)
 	}
 	logger.Info("Loading manufacturers trusted bundle")
+	logutil.LogWithPadding(logger, func() {
+		logger.Info("download and verify integrity")
+		logutil.LogDurationWithPadding(logger, startLoad)
+	})
 
 	if !slices.Contains(trustedBundle.GetVendors(), apiv1beta.VendorID(result.Manufacturer.ASCII)) {
 		logger.IncreasePadding()
@@ -92,28 +97,26 @@ func run(ctx context.Context, opts *options) error {
 		logger.WithField("date", metadata.Date).
 			WithField("commit", metadata.Commit).
 			Debug("bundle's metadata")
-		logger.Debugf("found %d vendors", len(trustedBundle.GetVendors()))
-		logger.IncreasePadding()
-		for _, v := range trustedBundle.GetVendors() {
-			logger.WithField("id", v).
-				Debug("vendor")
-		}
-		logger.DecreasePadding()
+		logger.Debugf("found %d vendors:", len(trustedBundle.GetVendors()))
+		logutil.LogWithPadding(logger, func() {
+			for _, v := range trustedBundle.GetVendors() {
+				logger.WithField("id", v).
+					Debug("vendor")
+			}
+		})
 		logger.DecreasePadding()
 		logger.WithField("id", result.Manufacturer.ASCII).
 			WithField("reason", `unfortunately, this manufacturer
-is not included yet in 'tpm-ca-certificates' 🥹
-Please open an issue to request its inclusion:
-https://github.com/loicsikidi/tpm-ca-certificates/issues/new
-`).
+	is not included yet in 'tpm-ca-certificates' 🥹
+	Please open an issue to request its inclusion:
+	https://github.com/loicsikidi/tpm-ca-certificates/issues/new
+	`).
 			Error("unsupported manufacturer")
 		return internal.ErrSilence
 	}
-
-	logger.IncreasePadding()
-	logger.WithField("id", result.Manufacturer.ASCII).Info("manufacturer supported")
-	logger.DecreasePadding()
-	logutil.LogDuration(logger, startLoad)
+	logutil.LogWithPadding(logger, func() {
+		logger.WithField("id", result.Manufacturer.ASCII).Info("manufacturer supported")
+	})
 
 	startValidate := time.Now()
 	logger.Info("Validating EK certificate")
@@ -130,10 +133,19 @@ https://github.com/loicsikidi/tpm-ca-certificates/issues/new
 		SkipRevocationCheck: opts.skipRevocationCheck,
 	}
 	if err := checker.Check(checkCfg); err != nil {
-		return internal.ErrSilence
+		if errors.Is(err, validate.ErrUntrustedCertificate) {
+			logutil.LogWithPadding(logger, func() {
+				logger.Error("status: untrusted")
+			})
+			logger.Error("TPM is not genuine ✋")
+			return internal.ErrSilence
+		}
+		return err
 	}
-	logutil.LogDuration(logger, startValidate)
-
+	logutil.LogWithPadding(logger, func() {
+		logger.Info("status: trusted")
+		logutil.LogDuration(logger, startValidate)
+	})
 	logger.Info("TPM is genuine 🔒")
 	return nil
 }
