@@ -91,8 +91,7 @@ func run(ctx context.Context, opts *options) error {
 		logutil.LogDurationWithPadding(logger, startLoad)
 	})
 
-	if !slices.Contains(trustedBundle.GetVendors(), apiv1beta.VendorID(result.Manufacturer.ASCII)) {
-		logger.IncreasePadding()
+	logutil.LogWithPadding(logger, func() {
 		metadata := trustedBundle.GetRootMetadata()
 		logger.WithField("date", metadata.Date).
 			WithField("commit", metadata.Commit).
@@ -104,7 +103,9 @@ func run(ctx context.Context, opts *options) error {
 					Debug("vendor")
 			}
 		})
-		logger.DecreasePadding()
+	})
+
+	if !slices.Contains(trustedBundle.GetVendors(), apiv1beta.VendorID(result.Manufacturer.ASCII)) {
 		logger.WithField("id", result.Manufacturer.ASCII).
 			WithField("reason", `unfortunately, this manufacturer
 	is not included yet in 'tpm-ca-certificates' 🥹
