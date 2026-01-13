@@ -106,9 +106,10 @@ func run(ctx context.Context, opts *options) error {
 		})
 	})
 
-	if !slices.Contains(trustedBundle.GetVendors(), apiv1beta.VendorID(result.Manufacturer.ASCII)) {
+	if slices.Contains(trustedBundle.GetVendors(), apiv1beta.VendorID(result.Manufacturer.ASCII)) {
 		logger.Debugf("raw manufacturer: %s", result.Manufacturer.String())
 		logger.Debugf("manufacturer's ASCII: %q", result.Manufacturer.ASCII)
+		logger.Debugf("manufacturer's ASCII (bytes): %v", []byte(result.Manufacturer.ASCII))
 		if apiv1beta.STM.String() == result.Manufacturer.ASCII {
 			logger.Debug("manufacturer is STM (case-sensitive match)")
 		}
