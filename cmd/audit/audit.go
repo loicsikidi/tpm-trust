@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/caarlos0/log"
@@ -106,6 +107,14 @@ func run(ctx context.Context, opts *options) error {
 	})
 
 	if !slices.Contains(trustedBundle.GetVendors(), apiv1beta.VendorID(result.Manufacturer.ASCII)) {
+		logger.Debugf("raw manufacturer: %s", result.Manufacturer.String())
+		logger.Debugf("manufacturer's ASCII: %q", result.Manufacturer.ASCII)
+		if apiv1beta.STM.String() == result.Manufacturer.ASCII {
+			logger.Debug("manufacturer is STM (case-sensitive match)")
+		}
+		if strings.EqualFold(apiv1beta.STM.String(), result.Manufacturer.ASCII) {
+			logger.Debug("manufacturer is STM (case-insensitive match)")
+		}
 		logger.WithField("id", result.Manufacturer.ASCII).
 			WithField("reason", `unfortunately, this manufacturer
 	is not included yet in 'tpm-ca-certificates' 🥹
