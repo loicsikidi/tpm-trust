@@ -4,20 +4,21 @@ package privilege
 
 import (
 	"errors"
+
+	"golang.org/x/sys/windows"
 )
 
 func init() {
 	platform = platformImpl{
-		// Windows doesn't need elevation
 		needsElevation: needsElevationWindows,
 		elevate:        elevateWindows,
 	}
 }
 
 func needsElevationWindows() bool {
-	return false
+	return !windows.GetCurrentProcessToken().IsElevated()
 }
 
 func elevateWindows() error {
-	return errors.ErrUnsupported
+	return errors.New("privilege elevation is not supported on Windows: please run the CLI from an administrator terminal (Run as Administrator)")
 }
