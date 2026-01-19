@@ -106,7 +106,9 @@ tpm-trust audit
 ```
 
 > [!TIP]
-> If TPM device needs a privilege access, the CLI will ask for elevated permissions 💫.
+> **Linux**: If TPM device needs privileged access, the CLI will automatically ask for elevated permissions using sudo 💫.
+>
+> **Windows**: You must run the CLI from an administrator terminal (Run as Administrator) to access the TPM device.
 
 #### Skip Revocation Check
 
@@ -137,7 +139,9 @@ tpm-trust version
 
 ## Requirements
 
-- **Platform**: Linux with TPM 2.0
+- **Platform**: Linux or Windows with TPM 2.0
+  - **Linux**: Privileged access will be requested automatically via sudo if needed
+  - **Windows**: Must be run from an administrator terminal (Run as Administrator)
 - **Internet Connection** (for initial setup):
   - Download and verify the trust bundle from `tpm-ca-certificates`
   - Fetch CRLs (if revocation checking is enabled)

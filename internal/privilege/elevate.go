@@ -19,10 +19,13 @@ func needsElevation() bool {
 
 // Elevate re-executes the current process with elevated privileges if necessary.
 //
-// This feature is only required on Linux.
-//
+// On Linux, this function re-executes the process using sudo if needed.
 // If elevation is successful, this function does not return as the current process
 // exits after spawning the elevated process.
+//
+// On Windows, this function returns an error as automatic privilege elevation
+// is not supported. Users must run the CLI from an administrator terminal
+// (Run as Administrator).
 func Elevate() error {
 	if !needsElevation() {
 		return nil
