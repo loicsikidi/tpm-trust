@@ -1,6 +1,6 @@
 module github.com/loicsikidi/tpm-trust
 
-go 1.25.0
+go 1.25.5
 
 require (
 	github.com/caarlos0/go-version v0.2.2
@@ -69,7 +69,7 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
-	github.com/secure-systems-lab/go-securesystemslib v0.9.1 // indirect
+	github.com/secure-systems-lab/go-securesystemslib v0.10.0 // indirect
 	github.com/shibumi/go-pathspec v1.3.0 // indirect
 	github.com/sigstore/protobuf-specs v0.5.0 // indirect
 	github.com/sigstore/rekor v1.4.3 // indirect
@@ -78,7 +78,7 @@ require (
 	github.com/sigstore/sigstore-go v1.1.4 // indirect
 	github.com/sigstore/timestamp-authority/v2 v2.0.4 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
-	github.com/theupdateframework/go-tuf/v2 v2.3.0 // indirect
+	github.com/theupdateframework/go-tuf/v2 v2.4.0 // indirect
 	github.com/transparency-dev/formats v0.0.0-20251215112053-1387eafc8b3f // indirect
 	github.com/transparency-dev/merkle v0.0.2 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
