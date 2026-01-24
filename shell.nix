@@ -1,7 +1,7 @@
 {
   pkgs ?
     import (fetchTarball
-      "https://github.com/NixOS/nixpkgs/archive/ebc94f855ef25347c314258c10393a92794e7ab9.tar.gz")
+      "https://github.com/NixOS/nixpkgs/archive/f665af0cdb70ed27e1bd8f9fdfecaf451260fc55.tar.gz")
     {},
 }: let
   helpers = import (builtins.fetchTarball
