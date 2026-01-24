@@ -6,8 +6,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/caarlos0/log"
 	"github.com/loicsikidi/attest/info"
+	"github.com/loicsikidi/tpm-trust/internal/log"
 )
 
 func TestOutputJSON(t *testing.T) {
@@ -63,7 +63,7 @@ func TestOutputJSON(t *testing.T) {
 }
 
 func TestOutputText(t *testing.T) {
-	logger := log.New(os.Stdout)
+	logger := log.New()
 
 	tpmInfo := &info.TPMInfo{
 		Vendor:   "test-vendor",
@@ -78,7 +78,6 @@ func TestOutputText(t *testing.T) {
 		},
 		NVMaxBufferSize: 2048,
 		NVIndexMaxSize:  2048,
-		HasEKCertChains: true,
 	}
 
 	// Test outputText - should not return an error

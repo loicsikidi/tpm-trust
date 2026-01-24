@@ -107,6 +107,12 @@ func (c *ekchecker) Check(cfg CheckConfig) error {
 	var issuers []*x509.Certificate
 	if len(cfg.EK.Chain) > 0 {
 		issuers = cfg.EK.Chain
+		lastIdx := len(issuers) - 1
+		parent, err := c.getIssuerCertificates(issuers[lastIdx])
+		if err != nil {
+			return nil
+		}
+		issuers = append(issuers, parent...)
 	} else {
 		var err error
 		issuers, err = c.getIssuerCertificates(cfg.EK.Certificate)
@@ -141,7 +147,7 @@ func (c *ekchecker) Check(cfg CheckConfig) error {
 	}
 
 	// Try verification with extended intermediates pool
-	if err := c.verifyCertificateWithIssuers(cfg.EK, issuers); err != nil {
+	if err := c.verifyCertificateWithIssuers(cfg.EK.Certificate, issuers); err != nil {
 		c.logger.WithError(err).Debug("certificate verification error")
 		return fmt.Errorf("%w: %v", ErrUntrustedCertificate, err)
 	}

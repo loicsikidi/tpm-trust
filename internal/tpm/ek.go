@@ -244,35 +244,6 @@ generation is computationally expensive.`).
 	return ek, nil
 }
 
-// findKeyType determines the key type from a [tpm2.TPMTPublic].
-// It returns a string describing the key algorithm and size (e.g., "rsa2048", "ecc-nist-p256").
-// Returns "unknown" for unsupported key types.
-func findKeyType(public tpm2.TPMTPublic) string {
-	switch public.Type {
-	case tpm2.TPMAlgRSA:
-		rsaDetails, _ := public.Parameters.RSADetail()
-		return fmt.Sprintf("rsa-%d", rsaDetails.KeyBits)
-	case tpm2.TPMAlgECC:
-		eccDetails, _ := public.Parameters.ECCDetail()
-		var curveName string
-		switch eccDetails.CurveID {
-		case tpm2.TPMECCSM2P256:
-			curveName = "sm2-p256"
-		case tpm2.TPMECCNistP256:
-			curveName = "nist-p256"
-		case tpm2.TPMECCNistP384:
-			curveName = "nist-p384"
-		case tpm2.TPMECCNistP521:
-			curveName = "nist-p521"
-		default:
-			curveName = "unknown"
-		}
-		return fmt.Sprintf("ecc-%s", curveName)
-	default:
-		return "unknown"
-	}
-}
-
 func getEK(tpm *attest.TPM, alg tpm2.TPMAlgID, availableCerts []attest.EKCertTemplate) (endorsement.EK, error) {
 	if slices.ContainsFunc(availableCerts, func(t attest.EKCertTemplate) bool {
 		return t.Type() == alg

@@ -7,8 +7,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/caarlos0/log"
 	"github.com/loicsikidi/attest/info"
+	"github.com/loicsikidi/tpm-trust/internal/log"
 	"github.com/loicsikidi/tpm-trust/internal/logutil"
 	"github.com/loicsikidi/tpm-trust/internal/privilege"
 	"github.com/loicsikidi/tpm-trust/internal/tpm"
@@ -66,15 +66,11 @@ func run(_ context.Context, opts *options) error {
 	}
 
 	// In JSON mode, we want to suppress logs to keep output clean
-	var logger *log.Logger
+	var logger log.Logger
 	if opts.format == "json" {
-		logger = log.New(os.Stderr)
-		logger.Level = log.ErrorLevel
+		logger = log.New(log.WithNoop())
 	} else {
-		logger = log.New(os.Stdout)
-		if opts.verbose {
-			logger.Level = log.DebugLevel
-		}
+		logger = log.New(log.WithVerbose(opts.verbose))
 	}
 
 	if err := privilege.Elevate(); err != nil {
@@ -108,7 +104,7 @@ func outputJSON(tpmInfo *info.TPMInfo) error {
 	return nil
 }
 
-func outputText(logger *log.Logger, tpmInfo *info.TPMInfo) error {
+func outputText(logger log.Logger, tpmInfo *info.TPMInfo) error {
 	logger.Info("TPM Information")
 	logutil.LogWithPadding(logger, func() {
 		logger.WithField("vendor", tpmInfo.Vendor).Info("Vendor")
@@ -156,9 +152,9 @@ func outputText(logger *log.Logger, tpmInfo *info.TPMInfo) error {
 			})
 		}
 
-		logger.WithField("present", tpmInfo.HasEKCertChains).Info("EK Certificate Chains")
+		logger.WithField("present", tpmInfo.HasEKCertChains()).Info("EK Certificate Chains")
 
-		if len(tpmInfo.EKCertChains) > 0 {
+		if tpmInfo.HasEKCertChains() {
 			logger.Infof("EK Certificate Chains (%d certificates)", len(tpmInfo.EKCertChains))
 			logutil.LogWithPadding(logger, func() {
 				for i, cert := range tpmInfo.EKCertChains {
