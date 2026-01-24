@@ -103,9 +103,15 @@ func (c *ekchecker) Check(cfg CheckConfig) error {
 		return err
 	}
 
-	issuers, err := c.getIssuerCertificates(c.downloader, cfg.EK.Certificate)
-	if err != nil {
-		return err
+	var issuers []*x509.Certificate
+	if len(cfg.EK.Chain) > 0 {
+		issuers = cfg.EK.Chain
+	} else {
+		var err error
+		issuers, err = c.getIssuerCertificates(cfg.EK.Certificate)
+		if err != nil {
+			return err
+		}
 	}
 
 	if !cfg.SkipRevocationCheck {
@@ -207,7 +213,7 @@ func (c *ekchecker) prepareUrls(urls []string) ([]*url.URL, error) {
 // it's a strict function that expects to get all the issuer certificates
 //
 // TODO(lsikidi): support recursive issuer fetching for deeper chains
-func (c *ekchecker) getIssuerCertificates(downloader *downloader, cert *x509.Certificate) ([]*x509.Certificate, error) {
+func (c *ekchecker) getIssuerCertificates(cert *x509.Certificate) ([]*x509.Certificate, error) {
 	issuerUrls, err := c.prepareUrls(cert.IssuingCertificateURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare issuer URLs: %w", err)
@@ -215,10 +221,10 @@ func (c *ekchecker) getIssuerCertificates(downloader *downloader, cert *x509.Cer
 
 	issuers := make([]*x509.Certificate, len(issuerUrls))
 	for idx, url := range issuerUrls {
-		ctx, cancel := context.WithTimeout(context.Background(), downloader.timeout)
+		ctx, cancel := context.WithTimeout(context.Background(), c.downloader.timeout)
 		defer cancel()
 
-		cert, err := downloader.downloadCRLSigner(ctx, url)
+		cert, err := c.downloader.downloadCRLSigner(ctx, url)
 		if err != nil {
 			return nil, fmt.Errorf("failed to download issuer certificate: %w", err)
 		}
