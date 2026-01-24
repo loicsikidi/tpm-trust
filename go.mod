@@ -5,9 +5,10 @@ go 1.25.0
 require (
 	github.com/caarlos0/go-version v0.2.2
 	github.com/caarlos0/log v0.5.3
-	github.com/google/go-tpm v0.9.8-0.20251124160146-9312d3e61676
-	github.com/loicsikidi/attest v0.3.0
-	github.com/loicsikidi/tpm-ca-certificates v0.6.0
+	github.com/google/go-tpm v0.9.8
+	github.com/loicsikidi/attest v0.4.1-0.20260124153409-534fa6fff58b
+	github.com/loicsikidi/tpm-ca-certificates v0.6.1-0.20260112223017-669c34f6b452
+	github.com/smallstep/certinfo v1.15.0
 	github.com/spf13/cobra v1.10.2
 )
 
@@ -60,7 +61,7 @@ require (
 	github.com/in-toto/attestation v1.1.2 // indirect
 	github.com/in-toto/in-toto-golang v0.9.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/loicsikidi/go-tpm-kit v0.2.0 // indirect
+	github.com/loicsikidi/go-tpm-kit v0.5.1-0.20260119050512-a4ae79044cfe // indirect
 	github.com/lucasb-eyer/go-colorful v1.3.0 // indirect
 	github.com/mattn/go-runewidth v0.0.19 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect

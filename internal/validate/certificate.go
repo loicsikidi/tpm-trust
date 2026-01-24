@@ -6,13 +6,13 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"os"
 	"slices"
 	"time"
 
-	"github.com/caarlos0/log"
+	"github.com/loicsikidi/attest/endorsement"
 	"github.com/loicsikidi/tpm-ca-certificates/pkg/apiv1beta"
-	"github.com/loicsikidi/tpm-trust/internal/sliceutil"
+	"github.com/loicsikidi/tpm-trust/internal/log"
+	"github.com/loicsikidi/tpm-trust/internal/util"
 )
 
 var (
@@ -35,19 +35,19 @@ type Checker interface {
 type ekchecker struct {
 	downloader *downloader
 	tb         apiv1beta.TrustedBundle
-	logger     *log.Logger
+	logger     log.Logger
 }
 
 type EKCheckerConfig struct {
 	Downloader    *downloader
 	TrustedBundle apiv1beta.TrustedBundle
 	Timeout       time.Duration
-	Logger        *log.Logger
+	Logger        log.Logger
 }
 
 func (e *EKCheckerConfig) CheckAndSetDefaults() error {
 	if e.Logger == nil {
-		e.Logger = log.New(os.Stdout)
+		e.Logger = log.New(log.WithNoop())
 	}
 	if e.Timeout == 0 {
 		e.Timeout = 5 * time.Second
@@ -81,12 +81,12 @@ func NewEKChecker(cfg EKCheckerConfig) (Checker, error) {
 }
 
 type CheckConfig struct {
-	EK                  *x509.Certificate
+	EK                  endorsement.EK
 	SkipRevocationCheck bool
 }
 
 func (c *CheckConfig) CheckAndSetDefaults() error {
-	if c.EK == nil {
+	if c.EK.Certificate == nil {
 		return fmt.Errorf("EK certificate must be provided")
 	}
 	return nil
@@ -103,13 +103,13 @@ func (c *ekchecker) Check(cfg CheckConfig) error {
 		return err
 	}
 
-	issuers, err := c.getIssuerCertificates(c.downloader, cfg.EK)
+	issuers, err := c.getIssuerCertificates(c.downloader, cfg.EK.Certificate)
 	if err != nil {
 		return err
 	}
 
 	if !cfg.SkipRevocationCheck {
-		crlUrls, err := c.prepareUrls(cfg.EK.CRLDistributionPoints)
+		crlUrls, err := c.prepareUrls(cfg.EK.Certificate.CRLDistributionPoints)
 		if err != nil {
 			return fmt.Errorf("failed to prepare CRL URLs: %w", err)
 		}
@@ -127,7 +127,7 @@ func (c *ekchecker) Check(cfg CheckConfig) error {
 				return fmt.Errorf("failed to verify CRL: %w", err)
 			}
 
-			if crl.IsRevoked(cfg.EK) {
+			if crl.IsRevoked(cfg.EK.Certificate) {
 				return ErrCertificateRevoked
 			}
 		}
@@ -140,7 +140,7 @@ func (c *ekchecker) Check(cfg CheckConfig) error {
 			c.logger.WithField("subject", issuer.Subject.String()).Debug("missing cert in trusted bundle")
 		}
 	}
-	if err := c.tb.VerifyCertificate(cfg.EK); err != nil {
+	if err := c.tb.VerifyCertificate(cfg.EK.Certificate); err != nil {
 		c.logger.WithError(err).Debug("certificate verification error")
 		c.logger.WithField("status", "untrusted").
 			Error("certificate")
@@ -152,26 +152,26 @@ func (c *ekchecker) Check(cfg CheckConfig) error {
 
 func (c *ekchecker) check(cfg *CheckConfig) error {
 	switch {
-	case cfg.EK.IsCA:
+	case cfg.EK.Certificate.IsCA:
 		return ErrEKCannotBeCA
-	case len(cfg.EK.IssuingCertificateURL) == 0:
+	case len(cfg.EK.Certificate.IssuingCertificateURL) == 0:
 		return fmt.Errorf("EK certificate does not contain AIA extension with issuing certificate URL")
 	// an arbitrary limit, so that we don't start making a large number of HTTP requests (if needed)
-	case len(cfg.EK.IssuingCertificateURL) > c.downloader.maxDownloads:
-		return fmt.Errorf("number of Issuers (%d) bigger than the maximum allowed number (%d) of downloads", len(cfg.EK.CRLDistributionPoints), c.downloader.maxDownloads)
-	case !cfg.SkipRevocationCheck && len(cfg.EK.CRLDistributionPoints) > c.downloader.maxDownloads:
-		return fmt.Errorf("number of CRLs (%d) bigger than the maximum allowed number (%d) of downloads", len(cfg.EK.CRLDistributionPoints), c.downloader.maxDownloads)
+	case len(cfg.EK.Certificate.IssuingCertificateURL) > c.downloader.maxDownloads:
+		return fmt.Errorf("number of Issuers (%d) bigger than the maximum allowed number (%d) of downloads", len(cfg.EK.Certificate.CRLDistributionPoints), c.downloader.maxDownloads)
+	case !cfg.SkipRevocationCheck && len(cfg.EK.Certificate.CRLDistributionPoints) > c.downloader.maxDownloads:
+		return fmt.Errorf("number of CRLs (%d) bigger than the maximum allowed number (%d) of downloads", len(cfg.EK.Certificate.CRLDistributionPoints), c.downloader.maxDownloads)
 	}
-	if len(cfg.EK.CRLDistributionPoints) == 0 {
+	if len(cfg.EK.Certificate.CRLDistributionPoints) == 0 {
 		c.logger.WithField("outcome", "revocation check will be skipped").Warn("missing CRL DP")
 		cfg.SkipRevocationCheck = true
 	}
-	if len(cfg.EK.UnhandledCriticalExtensions) > 0 {
-		c.logger.WithField("extensions", cfg.EK.UnhandledCriticalExtensions).
+	if len(cfg.EK.Certificate.UnhandledCriticalExtensions) > 0 {
+		c.logger.WithField("extensions", cfg.EK.Certificate.UnhandledCriticalExtensions).
 			Debug("found: unhandled critical extensions")
 	}
 	found := false
-	for _, ext := range cfg.EK.UnknownExtKeyUsage {
+	for _, ext := range cfg.EK.Certificate.UnknownExtKeyUsage {
 		if slices.Equal(ext, EKCertificate) {
 			found = true
 			break
@@ -229,7 +229,7 @@ func (c *ekchecker) getIssuerCertificates(downloader *downloader, cert *x509.Cer
 
 // filterIntermediates filters a pool of certificates to only return intermediate CA certificates.
 func filterIntermediates(pool []*x509.Certificate) []*x509.Certificate {
-	return sliceutil.Filter(pool, func(cert *x509.Certificate) (s *x509.Certificate, include bool) {
+	return util.Filter(pool, func(cert *x509.Certificate) (s *x509.Certificate, include bool) {
 		if !cert.IsCA {
 			return cert, false
 		}

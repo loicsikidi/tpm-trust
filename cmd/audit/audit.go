@@ -3,11 +3,9 @@ package audit
 import (
 	"context"
 	"fmt"
-	"os"
 	"slices"
 	"time"
 
-	"github.com/caarlos0/log"
 	"github.com/loicsikidi/tpm-ca-certificates/pkg/apiv1beta"
 	"github.com/loicsikidi/tpm-trust/internal"
 	"github.com/loicsikidi/tpm-trust/internal/logutil"
@@ -15,6 +13,8 @@ import (
 	"github.com/loicsikidi/tpm-trust/internal/tpm"
 	"github.com/loicsikidi/tpm-trust/internal/validate"
 	"github.com/spf13/cobra"
+
+	"github.com/loicsikidi/tpm-trust/internal/log"
 )
 
 type options struct {
@@ -57,10 +57,7 @@ Exit codes:
 }
 
 func run(ctx context.Context, opts *options) error {
-	logger := log.New(os.Stdout)
-	if opts.verbose {
-		logger.Level = log.DebugLevel
-	}
+	logger := log.New(log.WithVerbose(opts.verbose))
 
 	if err := privilege.Elevate(); err != nil {
 		return fmt.Errorf("failed to elevate privileges: %w", err)
@@ -68,7 +65,7 @@ func run(ctx context.Context, opts *options) error {
 
 	startRead := time.Now()
 	logger.Info("Reading EK certificate from TPM")
-	result, err := tpm.GetEKCertificate(tpm.TPMConfig{Logger: logger})
+	result, err := tpm.SearchEKCertificate(tpm.TPMConfig{Logger: logger})
 	if err != nil {
 		return fmt.Errorf("failed to read EK certificate: %w", err)
 	}
@@ -113,7 +110,7 @@ https://github.com/loicsikidi/tpm-ca-certificates/issues/new
 	}
 
 	checkCfg := validate.CheckConfig{
-		EK:                  result.Certificate,
+		EK:                  result.EK,
 		SkipRevocationCheck: opts.skipRevocationCheck,
 	}
 	if err := checker.Check(checkCfg); err != nil {
