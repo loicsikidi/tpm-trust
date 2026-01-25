@@ -258,12 +258,12 @@ github.com/kylelemons/godebug v1.1.0 h1:RPNrshWIDI6G2gRW9EHilWtl7Z6Sb1BR0xunSBf0
 github.com/kylelemons/godebug v1.1.0/go.mod h1:9/0rRGxNHcop5bhtWyNeEfOS8JIWk580+fNqagV/RAw=
 github.com/letsencrypt/boulder v0.20251110.0 h1:J8MnKICeilO91dyQ2n5eBbab24neHzUpYMUIOdOtbjc=
 github.com/letsencrypt/boulder v0.20251110.0/go.mod h1:ogKCJQwll82m7OVHWyTuf8eeFCjuzdRQlgnZcCl0V+8=
-github.com/loicsikidi/attest v0.4.1-0.20260124153409-534fa6fff58b h1:ujqqiPFWRlbvZSpOc6paq0OH3QtC5z6GlhMQb4P0bgM=
-github.com/loicsikidi/attest v0.4.1-0.20260124153409-534fa6fff58b/go.mod h1:RUT9UdS88cIyi/zikxVGx6zBToiqsp6ntrH0yk8rlvQ=
+github.com/loicsikidi/attest v0.4.1-0.20260125074818-3448a6e588b6 h1:Isf8xvbd1XwICgNB1GO0pY9CY8NS3mRTH/4KTiGpsSM=
+github.com/loicsikidi/attest v0.4.1-0.20260125074818-3448a6e588b6/go.mod h1:RUT9UdS88cIyi/zikxVGx6zBToiqsp6ntrH0yk8rlvQ=
 github.com/loicsikidi/go-tpm-kit v0.5.1-0.20260119050512-a4ae79044cfe h1:GokB+QZYGb0K9pBoTbP8ODl+qgEnbkmAN+yn7HCnbQw=
 github.com/loicsikidi/go-tpm-kit v0.5.1-0.20260119050512-a4ae79044cfe/go.mod h1:wiGEBo+Uo034XhPorTa6qF0ha3SJ8sYbVqn4S4GZH5I=
-github.com/loicsikidi/tpm-ca-certificates v0.6.1-0.20260112223017-669c34f6b452 h1:4C4BHx/VHqWpl0XVeAbYbdTEabFDg0H+q7szajMnPvU=
-github.com/loicsikidi/tpm-ca-certificates v0.6.1-0.20260112223017-669c34f6b452/go.mod h1:NGaT9n4xAD3DOzetKnM9Zkxqml/bdTb5BKwMI4dbRjE=
+github.com/loicsikidi/tpm-ca-certificates v0.6.1-0.20260124103738-7a380faa50a3 h1:N+g7aeQ+JEoIF1njssZjExjTZpE6qM/p6aZzgUk+PuI=
+github.com/loicsikidi/tpm-ca-certificates v0.6.1-0.20260124103738-7a380faa50a3/go.mod h1:NGaT9n4xAD3DOzetKnM9Zkxqml/bdTb5BKwMI4dbRjE=
 github.com/lucasb-eyer/go-colorful v1.3.0 h1:2/yBRLdWBZKrf7gB40FoiKfAWYQ0lqNcbuQwVHXptag=
 github.com/lucasb-eyer/go-colorful v1.3.0/go.mod h1:R4dSotOR9KMtayYi1e77YzuveK+i7ruzyGqttikkLy0=
 github.com/mattn/go-runewidth v0.0.19 h1:v++JhqYnZuu5jSKrk9RbgF5v4CGUjqRfBm05byFGLdw=

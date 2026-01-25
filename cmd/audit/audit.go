@@ -13,6 +13,7 @@ import (
 	"github.com/loicsikidi/tpm-trust/internal/logutil"
 	"github.com/loicsikidi/tpm-trust/internal/privilege"
 	"github.com/loicsikidi/tpm-trust/internal/tpm"
+	"github.com/loicsikidi/tpm-trust/internal/util"
 	"github.com/loicsikidi/tpm-trust/internal/validate"
 	"github.com/spf13/cobra"
 
@@ -20,6 +21,7 @@ import (
 )
 
 type options struct {
+	keyType             string
 	skipRevocationCheck bool
 	verbose             bool
 }
@@ -28,10 +30,15 @@ func NewCommand() *cobra.Command {
 	opts := &options{}
 
 	cmd := &cobra.Command{
-		Use:   "audit",
+		Use:   "audit [KTY]",
 		Short: "audit TPM's EK certificate against trusted manufacturers roots CAs",
 		Long: `Ensure that a TPM is legitimate by verifying its Endorsement Key (EK)
 certificate against a trust bundle of known TPM manufacturers.
+
+Available key types (KTY):
+  - rsa-2048, rsa-3072, rsa-4096
+  - ecc-nist-p256, ecc-nist-p384, ecc-nist-p521
+  - ecc-sm2-p256
 
 Exit codes:
   0 - TPM is trusted
@@ -43,18 +50,21 @@ Exit codes:
   tpm-trust audit --skip-revocation-check
 
   ## Audit with verbose logging
-  tpm-trust audit --verbose`,
+  tpm-trust audit --verbose
+  
+  ## Audit a specific key type
+  tpm-trust audit rsa-2048`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			opts.keyType = util.OptionalArg(args)
 			return run(cmd.Context(), opts)
 		},
-		Args:          cobra.NoArgs,
+		Args:          cobra.MaximumNArgs(1),
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
 
 	cmd.Flags().BoolVar(&opts.skipRevocationCheck, "skip-revocation-check", false, "Skip CRL revocation check")
 	cmd.Flags().BoolVarP(&opts.verbose, "verbose", "v", false, "Enable verbose logging")
-
 	return cmd
 }
 
@@ -67,9 +77,20 @@ func run(ctx context.Context, opts *options) error {
 
 	startRead := time.Now()
 	logger.Info("Reading EK certificate from TPM")
-	result, err := tpm.SearchEKCertificate(tpm.TPMConfig{Logger: logger})
-	if err != nil {
-		return fmt.Errorf("failed to read EK certificate: %w", err)
+	var (
+		result    *tpm.EKResponse
+		searchErr error
+	)
+	if opts.keyType == "" {
+		result, searchErr = tpm.SearchEKCertificate(tpm.TPMConfig{Logger: logger})
+		if searchErr != nil {
+			return fmt.Errorf("failed to read EK certificate: %w", searchErr)
+		}
+	} else {
+		result, searchErr = tpm.GetEKCertificate(tpm.TPMConfig{Logger: logger, KeyType: tpm.KeyType(opts.keyType)})
+		if searchErr != nil {
+			return fmt.Errorf("failed to read EK certificate: %w", searchErr)
+		}
 	}
 	logutil.LogDurationWithPadding(logger, startRead)
 

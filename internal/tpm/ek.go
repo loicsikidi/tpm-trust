@@ -52,6 +52,8 @@ var validKeyTypes = []KeyType{
 type TPMConfig struct {
 	Logger  log.Logger
 	KeyType KeyType
+	// If true, skip matching the public key during EK certificate search for faster operation
+	SkipPublicMatching bool
 }
 
 func (c *TPMConfig) CheckAndSetDefaults() error {
@@ -94,7 +96,7 @@ func GetEKCertificates(cfg TPMConfig) (*EKCertsResponse, error) {
 
 	logger := cfg.Logger
 	logger.IncreasePadding()
-	defer logger.ResetPadding()
+	defer logger.DecreasePadding()
 
 	logger.Debug("open connection to TPM")
 	tpm, err := attest.OpenTPM()
@@ -109,7 +111,7 @@ func GetEKCertificates(cfg TPMConfig) (*EKCertsResponse, error) {
 	}()
 
 	ekCerts, err := tpm.EKCertificates(endorsement.SearchCertConfig{
-		SkipPublicMatching: true, // enable skipping public matching for faster search
+		SkipPublicMatching: true,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get EK certificates: %w", err)
@@ -145,7 +147,7 @@ func SearchEKCertificate(cfg TPMConfig) (*EKResponse, error) {
 
 	logger := cfg.Logger
 	logger.IncreasePadding()
-	defer logger.ResetPadding()
+	defer logger.DecreasePadding()
 
 	logger.Debug("open connection to TPM")
 	tpm, err := attest.OpenTPM()
@@ -269,7 +271,7 @@ func GetEKCertificate(cfg TPMConfig) (*EKResponse, error) {
 
 	logger := cfg.Logger
 	logger.IncreasePadding()
-	defer logger.ResetPadding()
+	defer logger.DecreasePadding()
 
 	logger.Debug("open connection to TPM")
 	tpm, err := attest.OpenTPM()
@@ -283,7 +285,7 @@ func GetEKCertificate(cfg TPMConfig) (*EKResponse, error) {
 		}
 	}()
 
-	logger.Infof("searching for %s EK certificate", cfg.KeyType)
+	logger.Debugf("searching for %s EK certificate", cfg.KeyType)
 	availableCerts := endorsement.SearchAvailableCertificates(tpm.Tpm())
 	if len(availableCerts) == 0 {
 		return nil, fmt.Errorf("no EK certificates available in TPM")
@@ -301,15 +303,24 @@ func GetEKCertificate(cfg TPMConfig) (*EKResponse, error) {
 		return nil, fmt.Errorf("no EK certificate found for key type %s", cfg.KeyType)
 	}
 
-	ek, err := tpm.EK(attest.GetEKCertConfig{Template: *targetTemplate})
+	ek, err := tpm.EK(attest.GetEKCertConfig{
+		Template:           *targetTemplate,
+		SkipPublicMatching: cfg.SkipPublicMatching,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get EK certificate: %w", err)
 	}
 
 	logger.Infof("found %s EK certificate", cfg.KeyType)
 
+	info, err := tpm.Info()
+	if err != nil {
+		return nil, err
+	}
+
 	return &EKResponse{
-		EK: ek,
+		EK:           ek,
+		Manufacturer: info.Manufacturer,
 	}, nil
 }
 

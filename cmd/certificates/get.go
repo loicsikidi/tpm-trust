@@ -38,8 +38,6 @@ func newGetCommand() *cobra.Command {
 		Short: "display a specific TPM EK certificate",
 		Long: `Display a specific Endorsement Key (EK) certificate by key type.
 
-The certificate is displayed in a human-readable format similar to 'openssl x509 -text -noout'.
-
 Available key types (KTY):
   - rsa-2048, rsa-3072, rsa-4096
   - ecc-nist-p256, ecc-nist-p384, ecc-nist-p521
@@ -92,7 +90,12 @@ func runGet(_ context.Context, opts *getOptions, args []string) error {
 
 	logger.Infof("Reading %s EK certificate from TPM", keyType)
 
-	result, err := tpm.GetEKCertificate(tpm.TPMConfig{Logger: logger, KeyType: keyType})
+	result, err := tpm.GetEKCertificate(tpm.TPMConfig{
+		Logger:  logger,
+		KeyType: keyType,
+		// "get" fn is not a critical, we can skip public matching for faster operation
+		SkipPublicMatching: true,
+	})
 	if err != nil {
 		return fmt.Errorf("failed to read EK certificate: %w", err)
 	}
