@@ -2,7 +2,9 @@ package validate
 
 import (
 	"context"
+	"crypto/sha256"
 	"crypto/x509"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/url"
@@ -12,7 +14,6 @@ import (
 	"github.com/loicsikidi/attest/endorsement"
 	"github.com/loicsikidi/tpm-ca-certificates/pkg/apiv1beta"
 	"github.com/loicsikidi/tpm-trust/internal/log"
-	"github.com/loicsikidi/tpm-trust/internal/util"
 )
 
 var (
@@ -106,6 +107,12 @@ func (c *ekchecker) Check(cfg CheckConfig) error {
 	var issuers []*x509.Certificate
 	if len(cfg.EK.Chain) > 0 {
 		issuers = cfg.EK.Chain
+		lastIdx := len(issuers) - 1
+		parent, err := c.getIssuerCertificates(issuers[lastIdx])
+		if err != nil {
+			return nil
+		}
+		issuers = append(issuers, parent...)
 	} else {
 		var err error
 		issuers, err = c.getIssuerCertificates(cfg.EK.Certificate)
@@ -139,20 +146,11 @@ func (c *ekchecker) Check(cfg CheckConfig) error {
 		}
 	}
 
-	// TODO(lsikidi): create dynamic intermediate pool if the issuers is not yet supported
-	// in the trusted bundle?
-	for _, issuer := range filterIntermediates(issuers) {
-		if !c.tb.Contains(issuer) {
-			c.logger.WithField("subject", issuer.Subject.String()).Debug("missing cert in trusted bundle")
-		}
-	}
-	if err := c.tb.VerifyCertificate(cfg.EK.Certificate); err != nil {
+	// Try verification with extended intermediates pool
+	if err := c.verifyCertificateWithIssuers(cfg.EK.Certificate, issuers); err != nil {
 		c.logger.WithError(err).Debug("certificate verification error")
-		c.logger.WithField("status", "untrusted").
-			Error("certificate")
 		return fmt.Errorf("%w: %v", ErrUntrustedCertificate, err)
 	}
-	c.logger.WithField("status", "trusted").Info("certificate")
 	return nil
 }
 
@@ -191,6 +189,8 @@ func (c *ekchecker) check(cfg *CheckConfig) error {
 
 func (c *ekchecker) prepareUrls(urls []string) ([]*url.URL, error) {
 	var crlURLs []*url.URL
+	seen := make(map[string]bool)
+
 	for _, u := range urls {
 		parsedURL, err := url.Parse(u)
 		if err != nil {
@@ -204,6 +204,16 @@ func (c *ekchecker) prepareUrls(urls []string) ([]*url.URL, error) {
 				Warn("unsupported scheme: skipping")
 			continue
 		}
+
+		// skip duplicate URLs
+		urlStr := parsedURL.String()
+		if seen[urlStr] {
+			c.logger.WithField("endpoint", urlStr).
+				Debug("skipping duplicate URL")
+			continue
+		}
+		seen[urlStr] = true
+
 		crlURLs = append(crlURLs, parsedURL)
 	}
 	return crlURLs, nil
@@ -219,8 +229,10 @@ func (c *ekchecker) getIssuerCertificates(cert *x509.Certificate) ([]*x509.Certi
 		return nil, fmt.Errorf("failed to prepare issuer URLs: %w", err)
 	}
 
-	issuers := make([]*x509.Certificate, len(issuerUrls))
-	for idx, url := range issuerUrls {
+	var issuers []*x509.Certificate
+	seen := make(map[string]bool)
+
+	for _, url := range issuerUrls {
 		ctx, cancel := context.WithTimeout(context.Background(), c.downloader.timeout)
 		defer cancel()
 
@@ -228,28 +240,55 @@ func (c *ekchecker) getIssuerCertificates(cert *x509.Certificate) ([]*x509.Certi
 		if err != nil {
 			return nil, fmt.Errorf("failed to download issuer certificate: %w", err)
 		}
-		issuers[idx] = cert
+
+		hash := sha256.Sum256(cert.Raw)
+		fingerprint := hex.EncodeToString(hash[:])
+		if seen[fingerprint] {
+			c.logger.WithField("subject", cert.Subject.String()).
+				WithField("endpoint", url.String()).
+				WithField("fingerprint", fingerprint).
+				Debug("skipping duplicate certificate")
+			continue
+		}
+		seen[fingerprint] = true
+
+		issuers = append(issuers, cert)
 	}
 	return issuers, nil
 }
 
-// filterIntermediates filters a pool of certificates to only return intermediate CA certificates.
-func filterIntermediates(pool []*x509.Certificate) []*x509.Certificate {
-	return util.Filter(pool, func(cert *x509.Certificate) (s *x509.Certificate, include bool) {
-		if !cert.IsCA {
-			return cert, false
-		}
+func (c *ekchecker) verifyCertificateWithIssuers(cert *x509.Certificate, issuers []*x509.Certificate) error {
+	// Get base verify options from trusted bundle
+	opts := c.tb.GetVerifyOptions()
 
-		if isSelfSigned(cert) {
-			return cert, false
-		}
+	// Check which issuers are missing and add them to the intermediates pool
+	certs := slices.Clone(issuers)
 
-		if cert.KeyUsage&x509.KeyUsageCertSign == 0 {
-			return cert, false
+	for _, issuer := range certs {
+		if !c.tb.Contains(issuer) {
+			if isSelfSigned(issuer) {
+				c.logger.WithField("subject", issuer.Subject.String()).
+					WithField("reason", `unfortunately, the root certificate
+is not included yet in 'tpm-ca-certificates' 🥹
+Please open an issue to request its inclusion:
+https://github.com/loicsikidi/tpm-ca-certificates/issues/new
+`).
+					Error("unsupported root certificate")
+				continue
+			}
+			c.logger.WithField("reason", `the certificate is not included in the trusted bundle`).
+				Infof("adding %q to verification pool", issuer.Subject.String())
+			opts.Intermediates.AddCert(issuer)
 		}
+	}
 
-		return cert, true
-	})
+	// Copy the EK certificate and mark all critical extensions as handled
+	// to work around TPM-specific OIDs that x509 doesn't recognize
+	certCopy := *cert
+	certCopy.UnhandledCriticalExtensions = nil
+
+	_, err := certCopy.Verify(opts)
+	return err
 }
 
 // isSelfSigned checks if a certificate is self-signed

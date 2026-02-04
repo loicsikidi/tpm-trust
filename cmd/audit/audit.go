@@ -2,8 +2,10 @@ package audit
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/loicsikidi/tpm-ca-certificates/pkg/apiv1beta"
@@ -11,6 +13,7 @@ import (
 	"github.com/loicsikidi/tpm-trust/internal/logutil"
 	"github.com/loicsikidi/tpm-trust/internal/privilege"
 	"github.com/loicsikidi/tpm-trust/internal/tpm"
+	"github.com/loicsikidi/tpm-trust/internal/util"
 	"github.com/loicsikidi/tpm-trust/internal/validate"
 	"github.com/spf13/cobra"
 
@@ -18,6 +21,7 @@ import (
 )
 
 type options struct {
+	keyType             string
 	skipRevocationCheck bool
 	verbose             bool
 }
@@ -26,10 +30,15 @@ func NewCommand() *cobra.Command {
 	opts := &options{}
 
 	cmd := &cobra.Command{
-		Use:   "audit",
+		Use:   "audit [KTY]",
 		Short: "audit TPM's EK certificate against trusted manufacturers roots CAs",
 		Long: `Ensure that a TPM is legitimate by verifying its Endorsement Key (EK)
 certificate against a trust bundle of known TPM manufacturers.
+
+Available key types (KTY):
+  - rsa-2048, rsa-3072, rsa-4096
+  - ecc-nist-p256, ecc-nist-p384, ecc-nist-p521
+  - ecc-sm2-p256
 
 Exit codes:
   0 - TPM is trusted
@@ -41,18 +50,21 @@ Exit codes:
   tpm-trust audit --skip-revocation-check
 
   ## Audit with verbose logging
-  tpm-trust audit --verbose`,
+  tpm-trust audit --verbose
+  
+  ## Audit a specific key type
+  tpm-trust audit rsa-2048`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			opts.keyType = util.OptionalArg(args)
 			return run(cmd.Context(), opts)
 		},
-		Args:          cobra.NoArgs,
+		Args:          cobra.MaximumNArgs(1),
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
 
 	cmd.Flags().BoolVar(&opts.skipRevocationCheck, "skip-revocation-check", false, "Skip CRL revocation check")
 	cmd.Flags().BoolVarP(&opts.verbose, "verbose", "v", false, "Enable verbose logging")
-
 	return cmd
 }
 
@@ -65,11 +77,22 @@ func run(ctx context.Context, opts *options) error {
 
 	startRead := time.Now()
 	logger.Info("Reading EK certificate from TPM")
-	result, err := tpm.SearchEKCertificate(tpm.TPMConfig{Logger: logger})
-	if err != nil {
-		return fmt.Errorf("failed to read EK certificate: %w", err)
+	var (
+		result    *tpm.EKResponse
+		searchErr error
+	)
+	if opts.keyType == "" {
+		result, searchErr = tpm.SearchEKCertificate(tpm.TPMConfig{Logger: logger})
+		if searchErr != nil {
+			return fmt.Errorf("failed to read EK certificate: %w", searchErr)
+		}
+	} else {
+		result, searchErr = tpm.GetEKCertificate(tpm.TPMConfig{Logger: logger, KeyType: tpm.KeyType(opts.keyType)})
+		if searchErr != nil {
+			return fmt.Errorf("failed to read EK certificate: %w", searchErr)
+		}
 	}
-	logutil.LogDuration(logger, startRead)
+	logutil.LogDurationWithPadding(logger, startRead)
 
 	startLoad := time.Now()
 	cfg := apiv1beta.GetConfig{
@@ -82,22 +105,47 @@ func run(ctx context.Context, opts *options) error {
 		return fmt.Errorf("failed to get trusted bundle: %w", err)
 	}
 	logger.Info("Loading manufacturers trusted bundle")
+	logutil.LogWithPadding(logger, func() {
+		logger.Info("download and verify integrity")
+		logutil.LogDurationWithPadding(logger, startLoad)
+	})
+
+	logutil.LogWithPadding(logger, func() {
+		metadata := trustedBundle.GetRootMetadata()
+		logger.WithField("date", metadata.Date).
+			WithField("commit", metadata.Commit).
+			Debug("bundle's metadata")
+		logger.Debugf("found %d vendors:", len(trustedBundle.GetVendors()))
+		logutil.LogWithPadding(logger, func() {
+			for _, v := range trustedBundle.GetVendors() {
+				logger.WithField("id", v).
+					Debug("vendor")
+			}
+		})
+	})
 
 	if !slices.Contains(trustedBundle.GetVendors(), apiv1beta.VendorID(result.Manufacturer.ASCII)) {
+		logger.Debugf("raw manufacturer: %s", result.Manufacturer.String())
+		logger.Debugf("manufacturer's ASCII: %q", result.Manufacturer.ASCII)
+		logger.Debugf("manufacturer's ASCII (bytes): %v", []byte(result.Manufacturer.ASCII))
+		if apiv1beta.STM.String() == result.Manufacturer.ASCII {
+			logger.Debug("manufacturer is STM (case-sensitive match)")
+		}
+		if strings.EqualFold(apiv1beta.STM.String(), result.Manufacturer.ASCII) {
+			logger.Debug("manufacturer is STM (case-insensitive match)")
+		}
 		logger.WithField("id", result.Manufacturer.ASCII).
 			WithField("reason", `unfortunately, this manufacturer
-is not included yet in 'tpm-ca-certificates' 🥹
-Please open an issue to request its inclusion:
-https://github.com/loicsikidi/tpm-ca-certificates/issues/new
-`).
+	is not included yet in 'tpm-ca-certificates' 🥹
+	Please open an issue to request its inclusion:
+	https://github.com/loicsikidi/tpm-ca-certificates/issues/new
+	`).
 			Error("unsupported manufacturer")
 		return internal.ErrSilence
 	}
-
-	logger.IncreasePadding()
-	logger.WithField("id", result.Manufacturer.ASCII).Info("manufacturer supported")
-	logger.DecreasePadding()
-	logutil.LogDuration(logger, startLoad)
+	logutil.LogWithPadding(logger, func() {
+		logger.WithField("id", result.Manufacturer.ASCII).Info("manufacturer supported")
+	})
 
 	startValidate := time.Now()
 	logger.Info("Validating EK certificate")
@@ -114,10 +162,19 @@ https://github.com/loicsikidi/tpm-ca-certificates/issues/new
 		SkipRevocationCheck: opts.skipRevocationCheck,
 	}
 	if err := checker.Check(checkCfg); err != nil {
-		return internal.ErrSilence
+		if errors.Is(err, validate.ErrUntrustedCertificate) {
+			logutil.LogWithPadding(logger, func() {
+				logger.Error("status: untrusted")
+			})
+			logger.Error("TPM is not genuine ✋")
+			return internal.ErrSilence
+		}
+		return err
 	}
-	logutil.LogDuration(logger, startValidate)
-
+	logutil.LogWithPadding(logger, func() {
+		logger.Info("status: trusted")
+		logutil.LogDuration(logger, startValidate)
+	})
 	logger.Info("TPM is genuine 🔒")
 	return nil
 }

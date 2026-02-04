@@ -8,6 +8,7 @@ import (
 	"github.com/caarlos0/log"
 	"github.com/loicsikidi/tpm-trust/cmd/audit"
 	"github.com/loicsikidi/tpm-trust/cmd/certificates"
+	"github.com/loicsikidi/tpm-trust/cmd/info"
 	versionCmd "github.com/loicsikidi/tpm-trust/cmd/version"
 	"github.com/loicsikidi/tpm-trust/internal"
 	"github.com/spf13/cobra"
@@ -31,6 +32,7 @@ certificate against a trusted bundle of TPM manufacturer root certificates.`,
 
 	rootCmd.AddCommand(audit.NewCommand())
 	rootCmd.AddCommand(certificates.NewCommand())
+	rootCmd.AddCommand(info.NewCommand())
 	rootCmd.AddCommand(versionCmd.NewCommand(buildVersion(version, builtBy)))
 
 	if err := rootCmd.Execute(); err != nil {
