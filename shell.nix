@@ -1,7 +1,8 @@
 {
   pkgs ?
     import (fetchTarball
-      "https://github.com/NixOS/nixpkgs/archive/f665af0cdb70ed27e1bd8f9fdfecaf451260fc55.tar.gz")
+      # pin nixpkgs in order to use go v1.26.0
+      "https://github.com/NixOS/nixpkgs/archive/80d901ec0377e19ac3f7bb8c035201e2e098cc97.tar.gz")
     {},
 }: let
   helpers = import (builtins.fetchTarball
