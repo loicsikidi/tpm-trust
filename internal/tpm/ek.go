@@ -1,13 +1,17 @@
 package tpm
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/google/go-tpm/tpm2"
 	"github.com/loicsikidi/attest"
@@ -168,7 +172,7 @@ func SearchEKCertificate(cfg TPMConfig) (*EKResponse, error) {
 	}
 	logger.WithField("id", info.Manufacturer.ASCII).Infof("manufacturer: %q", info.Manufacturer.Name)
 
-	ek, err := search(logger, tpm)
+	ek, err := search(logger, tpm, info)
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +180,7 @@ func SearchEKCertificate(cfg TPMConfig) (*EKResponse, error) {
 }
 
 // search looks for an Endorsement Key (EK) certificate in the NVRAM of the TPM.
-func search(logger log.Logger, tpm *attest.TPM) (endorsement.EK, error) {
+func search(logger log.Logger, tpm *attest.TPM, tpmInfo *info.TPMInfo) (endorsement.EK, error) {
 	// Objective: be the fastest possible because the app is user visible.
 	// In order to achieve that, we:
 	// 1. Search available EK certs in TPM (using nv indices)
@@ -186,9 +190,9 @@ func search(logger log.Logger, tpm *attest.TPM) (endorsement.EK, error) {
 	//   3.b Fallback to RSA if ECC is not available
 	logger.Info("start searching for EK certificates")
 	availableCerts := endorsement.SearchAvailableCertificates(tpm.Tpm())
-	// TODO(lsikidi): support EKCertURL (i.e. AMD, INTC) scenario
 	if len(availableCerts) == 0 {
-		return endorsement.EK{}, fmt.Errorf("no EK certificates available in TPM")
+		logger.Debug("no EK certificates found in NV, falling back to manufacturer EK cert URL")
+		return fetchEKCertFromURL(logger, tpm, tpmInfo)
 	}
 	logger.Infof("found %d EK certificate(s):", len(availableCerts))
 	logutil.LogWithPadding(logger, func() {
@@ -243,6 +247,59 @@ generation is computationally expensive.`).
 	}
 	logger.WithField("issuer", ek.Certificate.Issuer).
 		Infof("select %s certificate", findKeyTypeFromCert(ek.Certificate))
+	return ek, nil
+}
+
+// fetchEKCertFromURL generates an EK public key and fetches the EK certificate
+// from the manufacturer's URL (supported for AMD and Intel fTPMs where the
+// certificate is not pre-provisioned in TPM NV storage).
+func fetchEKCertFromURL(logger log.Logger, tpm *attest.TPM, tpmInfo *info.TPMInfo) (endorsement.EK, error) {
+	// Try RSA first — AMD and Intel EK cert URLs are typically RSA-based.
+	ek, err := endorsement.Get(tpm.Tpm(), endorsement.GetConfig{
+		Template: endorsement.TemplateRSA,
+		Info:     *tpmInfo,
+	})
+	if err != nil {
+		return endorsement.EK{}, fmt.Errorf("failed to generate EK: %w", err)
+	}
+
+	if ek.CertificateURL == "" {
+		return endorsement.EK{}, fmt.Errorf("no EK certificates available in TPM and manufacturer %q does not support URL-based cert retrieval", tpmInfo.Manufacturer.ASCII)
+	}
+
+	logger.WithField("url", ek.CertificateURL).Debug("fetching EK certificate from manufacturer URL")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, ek.CertificateURL, nil)
+	if err != nil {
+		return endorsement.EK{}, fmt.Errorf("failed to build request for EK cert URL: %w", err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return endorsement.EK{}, fmt.Errorf("failed to fetch EK certificate from %s: %w", ek.CertificateURL, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return endorsement.EK{}, fmt.Errorf("unexpected HTTP %d fetching EK certificate from %s", resp.StatusCode, ek.CertificateURL)
+	}
+
+	certData, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return endorsement.EK{}, fmt.Errorf("failed to read EK certificate response: %w", err)
+	}
+
+	cert, err := endorsement.ParseEKCertificate(certData)
+	if err != nil {
+		return endorsement.EK{}, fmt.Errorf("failed to parse EK certificate from URL: %w", err)
+	}
+
+	ek.Certificate = cert
+	logger.WithField("issuer", cert.Issuer).
+		Infof("select %s certificate (via URL)", findKeyTypeFromCert(cert))
 	return ek, nil
 }
 
