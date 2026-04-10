@@ -276,7 +276,7 @@ func getEK(tpm *attest.TPM, alg tpm2.TPMAlgID, availableCerts []attest.EKCertTem
 // fetchEKCertFromURL generates an EK public key and fetches the EK certificate
 // from the manufacturer's URL (supported for AMD and Intel fTPMs where the
 // certificate is not pre-provisioned in TPM NV storage).
-// It tries RSA first, then ECC, as both key types may have a URL.
+// It tries ECC first (faster key generation), then RSA, as both key types may have a URL.
 func fetchEKCertFromURL(logger log.Logger, tpm *attest.TPM, tpmInfo *info.TPMInfo) (endorsement.EK, error) {
 	return fetchEKCertFromURLWithClient(logger, tpm, tpmInfo, http.DefaultClient)
 }
