@@ -6,11 +6,11 @@ require (
 	github.com/caarlos0/go-version v0.2.2
 	github.com/caarlos0/log v0.5.3
 	github.com/google/go-tpm v0.9.8
-	github.com/loicsikidi/attest v0.4.1-0.20260125074818-3448a6e588b6
-	github.com/loicsikidi/tpm-ca-certificates v0.6.1-0.20260204205332-ce51e4f148b3
+	github.com/loicsikidi/attest v0.5.0
+	github.com/loicsikidi/tpm-ca-certificates v0.8.0
 	github.com/smallstep/certinfo v1.15.0
 	github.com/spf13/cobra v1.10.2
-	golang.org/x/sys v0.40.0
+	golang.org/x/sys v0.42.0
 )
 
 require (
@@ -62,7 +62,7 @@ require (
 	github.com/in-toto/attestation v1.1.2 // indirect
 	github.com/in-toto/in-toto-golang v0.9.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/loicsikidi/go-tpm-kit v0.5.1-0.20260119050512-a4ae79044cfe // indirect
+	github.com/loicsikidi/go-tpm-kit v0.6.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.3.0 // indirect
 	github.com/mattn/go-runewidth v0.0.19 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
@@ -94,12 +94,12 @@ require (
 	go.opentelemetry.io/proto/otlp v1.9.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	go.yaml.in/yaml/v4 v4.0.0-rc.3 // indirect
-	golang.org/x/crypto v0.47.0 // indirect
-	golang.org/x/mod v0.31.0 // indirect
-	golang.org/x/net v0.49.0 // indirect
-	golang.org/x/sync v0.19.0 // indirect
-	golang.org/x/term v0.39.0 // indirect
-	golang.org/x/text v0.33.0 // indirect
+	golang.org/x/crypto v0.49.0 // indirect
+	golang.org/x/mod v0.33.0 // indirect
+	golang.org/x/net v0.51.0 // indirect
+	golang.org/x/sync v0.20.0 // indirect
+	golang.org/x/term v0.41.0 // indirect
+	golang.org/x/text v0.35.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260128011058-8636f8732409 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260128011058-8636f8732409 // indirect
 	google.golang.org/grpc v1.78.0 // indirect
