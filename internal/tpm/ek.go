@@ -284,6 +284,7 @@ func fetchEKCertFromURL(logger log.Logger, tpm *attest.TPM, tpmInfo *info.TPMInf
 // fetchEKCertFromURLWithClient is the internal implementation with an injectable HTTP client.
 func fetchEKCertFromURLWithClient(logger log.Logger, tpm *attest.TPM, tpmInfo *info.TPMInfo, client httpClient) (endorsement.EK, error) {
 	// Try ECC first (faster key generation), then RSA. AMD and Intel compute cert URLs for both key types.
+	var lastFetchErr error
 	for _, tmpl := range []endorsement.Template{endorsement.TemplateECC, endorsement.TemplateRSA} {
 		ek, err := endorsement.Get(tpm.Tpm(), endorsement.GetConfig{
 			Template: tmpl,
@@ -299,7 +300,9 @@ func fetchEKCertFromURLWithClient(logger log.Logger, tpm *attest.TPM, tpmInfo *i
 		defer cancel()
 		cert, err := fetchCertFromURL(ctx, ek.CertificateURL, client)
 		if err != nil {
-			return endorsement.EK{}, err
+			logger.WithField("url", ek.CertificateURL).Debugf("failed to fetch certificate, trying next template: %v", err)
+			lastFetchErr = err
+			continue
 		}
 
 		ek.Certificate = cert
@@ -308,7 +311,10 @@ func fetchEKCertFromURLWithClient(logger log.Logger, tpm *attest.TPM, tpmInfo *i
 		return ek, nil
 	}
 
-	return endorsement.EK{}, fmt.Errorf("no EK certificates available in TPM and manufacturer %q does not support URL-based cert retrieval", tpmInfo.Manufacturer.ASCII)
+	if lastFetchErr != nil {
+		return endorsement.EK{}, fmt.Errorf("failed to fetch EK certificate from manufacturer %q: %w", tpmInfo.Manufacturer.ASCII, lastFetchErr)
+	}
+	return endorsement.EK{}, fmt.Errorf("no EK certificates found: TPM NV storage is empty and manufacturer %q did not provide an EK certificate URL for ECC or RSA", tpmInfo.Manufacturer.ASCII)
 }
 
 // fetchCertFromURL fetches a DER-encoded EK certificate from the given URL.
