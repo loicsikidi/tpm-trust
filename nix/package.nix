@@ -9,7 +9,7 @@
   version =
     if src != null
     then "unstable"
-    else "0.1.1";
+    else "0.3.0";
 in
   buildGo125Module {
     pname = "tpm-trust";
@@ -23,10 +23,10 @@ in
           owner = "loicsikidi";
           repo = "tpm-trust";
           tag = "v${version}";
-          hash = "sha256-w6CVs8huAhlkYiA7a6dY4WsF3Ri5puW494rq9mnpmjY=";
+          hash = "sha256-fU7gUspZaDxfyQblQzmOdyk1FyGP7TbKFXu9riTnyr8=";
         };
 
-    vendorHash = "sha256-yuqq485vIO+EI05RzjEFX2L2Mtp6gS3pi8RK3gmeUu0=";
+    vendorHash = "sha256-jkZ9J97giFaaoK+sSFCHyV55bqCzaAYqu5A03sWppOg=";
 
     # Build the main package (at the root)
     # subPackages defaults to [ "." ] if not specified
