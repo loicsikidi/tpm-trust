@@ -62,10 +62,14 @@ pkgs.mkShell {
   ];
 }
 ```
+### On Arch Linux
+
+tpm-trust is available in the [AUR](https://aur.archlinux.org/packages/tpm-trust-git) and can be installed with `paru -S tpm-trust-git`.
 
 ### Shell Completion
 
 `tpm-trust` provides shell completion for bash, zsh, and fish. Enable it for a smoother experience:
+
 
 **For bash:**
 ```bash
