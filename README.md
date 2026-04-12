@@ -1,5 +1,9 @@
 # tpm-trust
 
+![go version](https://img.shields.io/github/go-mod/go-version/loicsikidi/tpm-trust)
+[![latest](https://img.shields.io/github/v/release/loicsikidi/tpm-trust)](https://github.com/loicsikidi/tpm-trust/releases)
+[![license](https://img.shields.io/badge/license-BSD--3--Clause-blue?style=flat-square)](https://raw.githubusercontent.com/loicsikidi/tpm-trust/main/LICENSE)
+
 A command-line tool to verify the authenticity of a TPM (Trusted Platform Module) by validating its Endorsement Key (EK) certificate against a trusted bundle of TPM manufacturer root certificates.
 
 > [!IMPORTANT]
@@ -16,6 +20,7 @@ This project demonstrates the utility of [tpm-ca-certificates](https://github.co
 ## Primitives
 
 - 📚 **Read-only TPM operations**: No writes to the TPM, purely verification
+- ✅ **Latest EK Specifications**: Supports high-range handles and EK certificate chains
 - 📜 **Uses `tpm-ca-certificates`**: Leverages native library features
   - Centralized trust roots provided by TPM manufacturers
   - Bundle integrity verification
@@ -62,6 +67,7 @@ pkgs.mkShell {
   ];
 }
 ```
+
 ### On Arch Linux
 
 tpm-trust is available in the [AUR](https://aur.archlinux.org/packages/tpm-trust-git) and can be installed with `paru -S tpm-trust-git`.
@@ -135,6 +141,28 @@ tpm-trust audit --verbose
 - `0`: TPM is trusted and verification succeeded
 - `1`: TPM is not trusted or validation failed
 
+### Info command
+
+Display TPM information (manufacturer, model, firmware, supported key types, etc.):
+
+```bash
+tpm-trust info
+```
+
+### Certificates commands
+
+List available key types:
+
+```bash
+tpm-trust certificates list
+```
+
+Get certificate details for a specific key type:
+
+```bash
+tpm-trust certificates get $KTY
+```
+
 ### Version command
 
 ```bash
@@ -151,12 +179,54 @@ tpm-trust version
   - Fetch CRLs (if revocation checking is enabled)
   - Download intermediate certificates (if needed)
 
+## Tested TPM Hardware
+
+The following TPM devices have been successfully verified using `tpm-trust audit`:
+
+| Manufacturer | Model | Revision | Firmware |
+|-------------|-------|----------|----------|
+| Nuvoton Technology (NTC) | NPCT75x | 1.59 | 7.2 |
+
+> [!NOTE]
+> If you've successfully verified your TPM with `tpm-trust`, please consider to create a PR to add your hardware to this list!
+>
+> <details>
+> <summary><b>How to find your TPM information</b></summary>
+>
+> To add your TPM to this list, follow these steps:
+>
+> 1. **List available key types**:
+>    ```bash
+>    tpm-trust certificates list
+>    ```
+>    This will show the available key types (kty) on your TPM (e.g., `rsa-2048`, `ecc-nist-p384`).
+>
+> 2. **List certificates for a specific key type**:
+>    ```bash
+>    tpm-trust certificates get <kty>
+>    ```
+>    Replace `<kty>` with one of the key types from step 1 (e.g., `tpm-trust certificates get rsa-2048`).
+>
+> 3. **Find the TPM Model from the SAN (Subject Alternative Name)**:
+>
+>    In the certificate output, look for the `X509v3 Subject Alternative Name` section:
+>
+>    ![](san.png)
+>
+>    The `TPM Model` field contains your TPM model (e.g., `NPCT75x`).
+>
+> 4. **Get manufacturer, revision, and firmware**:
+>    ```bash
+>    tpm-trust info
+>    ```
+>    This command will display the manufacturer name, revision, and firmware version.
+>
+> </details>
+
 ## Known Limitations
 
 - **Platform Support**: Only TPM 2.0 is currently supported
   - I don't plan to support TPM 1.2 as it's largely obsolete
-- **External EK Certificate URLs**: AMD and Intel TPMs that store EK certificates externally (via URL) are not yet supported due to lack of test hardware
-  - If you have AMD/Intel hardware and would like to help test this feature, please [open an issue](https://github.com/loicsikidi/tpm-trust/issues/new) or contact me directly via mail at `rat_9_epics@icloud.com`
 - `tpm-ca-certificates` currently only supports a limited set of TPM manufacturers. Check its documentation [here](https://github.com/loicsikidi/tpm-ca-certificates/tree/main/src#vendor-index) for the latest supported vendors.
   * If you need support for a specific TPM manufacturer, please open [an issue](https://github.com/loicsikidi/tpm-ca-certificates/issues/new) in the `tpm-ca-certificates` repository.
 
