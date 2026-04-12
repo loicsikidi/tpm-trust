@@ -188,7 +188,7 @@ The following TPM devices have been successfully verified using `tpm-trust audit
 | Nuvoton Technology (NTC) | NPCT75x | 1.59 | 7.2 |
 
 > [!NOTE]
-> If you've successfully verified your TPM with `tpm-trust`, please consider to create a PR to add your hardware to this list!
+> If you've successfully verified your TPM with `tpm-trust` and don't see your hardware in the table above, please consider creating a PR to add it!
 >
 > <details>
 > <summary><b>How to find your TPM information</b></summary>
