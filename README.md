@@ -163,6 +163,12 @@ Get certificate details for a specific key type:
 tpm-trust certificates get $KTY
 ```
 
+Display EK certificate chains stored in TPM NVRAM:
+
+```bash
+tpm-trust certificates bundle
+```
+
 ### Version command
 
 ```bash
