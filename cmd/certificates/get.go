@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 
+	internalcertinfo "github.com/loicsikidi/tpm-trust/internal/certinfo"
 	"github.com/loicsikidi/tpm-trust/internal/privilege"
 	"github.com/loicsikidi/tpm-trust/internal/tpm"
 	"github.com/smallstep/certinfo"
@@ -82,9 +83,9 @@ func runGet(_ context.Context, opts *getOptions, args []string) error {
 
 	var logger log.Logger
 	if opts.verbose && opts.format != "pem" {
-		// Use standard logger for text output
 		logger = log.New(log.WithVerbose(opts.verbose))
 	} else {
+		// Use noop logger for JSON output to avoid polluting the output
 		logger = log.New(log.WithNoop())
 	}
 
@@ -130,22 +131,10 @@ func displayPEM(result *tpm.EKResponse, bundle bool) error {
 }
 
 func displayText(result *tpm.EKResponse, short bool, bundle bool) error {
-	var certText string
-	var err error
-
-	if short {
-		certText, err = certinfo.CertificateShortText(result.EK.Certificate)
-	} else {
-		certText, err = certinfo.CertificateText(result.EK.Certificate)
-	}
-
-	if err != nil {
+	if err := displayCertText(result.EK.Certificate, short); err != nil {
 		return fmt.Errorf("failed to format certificate: %w", err)
 	}
 
-	fmt.Println(certText)
-
-	// Display the chain if requested
 	if bundle && len(result.EK.Chain) > 0 {
 		for i, cert := range result.EK.Chain {
 			if err := displayCertText(cert, short); err != nil {
@@ -165,7 +154,8 @@ func displayCertText(cert *x509.Certificate, short bool) error {
 	var err error
 
 	if short {
-		certText, err = certinfo.CertificateShortText(cert)
+		// We reimported the internal certinfo package to show more info
+		certText, err = internalcertinfo.CertificateTextShort(cert)
 	} else {
 		certText, err = certinfo.CertificateText(cert)
 	}
