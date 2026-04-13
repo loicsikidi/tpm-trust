@@ -39,13 +39,13 @@ func NewCommand() *cobra.Command {
 		Long: `Display static information about the TPM including vendor, manufacturer,
 firmware version, supported algorithms, and more.`,
 		Example: `  # Display TPM info in text format
-  tpm-trust beta info
+  tpm-trust info
 
   # Display TPM info in JSON format
-  tpm-trust beta info --format json
+  tpm-trust info --format json
 
   # Display TPM info with verbose logging
-  tpm-trust beta info --verbose`,
+  tpm-trust info --verbose`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return run(cmd.Context(), opts)
 		},
