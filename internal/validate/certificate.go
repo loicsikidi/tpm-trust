@@ -158,8 +158,6 @@ func (c *ekchecker) check(cfg *CheckConfig) error {
 	switch {
 	case cfg.EK.Certificate.IsCA:
 		return ErrEKCannotBeCA
-	case len(cfg.EK.Certificate.IssuingCertificateURL) == 0:
-		return fmt.Errorf("EK certificate does not contain AIA extension with issuing certificate URL")
 	// an arbitrary limit, so that we don't start making a large number of HTTP requests (if needed)
 	case len(cfg.EK.Certificate.IssuingCertificateURL) > c.downloader.maxDownloads:
 		return fmt.Errorf("number of Issuers (%d) bigger than the maximum allowed number (%d) of downloads", len(cfg.EK.Certificate.CRLDistributionPoints), c.downloader.maxDownloads)
