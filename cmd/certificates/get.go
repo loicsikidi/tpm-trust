@@ -3,17 +3,12 @@ package certificates
 import (
 	"context"
 	"crypto/x509"
-	"encoding/pem"
 	"fmt"
-	"os"
-
-	internalcertinfo "github.com/loicsikidi/tpm-trust/internal/certinfo"
-	"github.com/loicsikidi/tpm-trust/internal/privilege"
-	"github.com/loicsikidi/tpm-trust/internal/tpm"
-	"github.com/smallstep/certinfo"
-	"github.com/spf13/cobra"
 
 	"github.com/loicsikidi/tpm-trust/internal/log"
+	"github.com/loicsikidi/tpm-trust/internal/privilege"
+	"github.com/loicsikidi/tpm-trust/internal/tpm"
+	"github.com/spf13/cobra"
 )
 
 type getOptions struct {
@@ -109,61 +104,17 @@ func runGet(_ context.Context, opts *getOptions, args []string) error {
 }
 
 func displayPEM(result *tpm.EKResponse, bundle bool) error {
-	if err := pem.Encode(os.Stdout, &pem.Block{
-		Type:  "CERTIFICATE",
-		Bytes: result.EK.Certificate.Raw,
-	}); err != nil {
-		return fmt.Errorf("failed to encode certificate: %w", err)
-	}
-
+	certs := []*x509.Certificate{result.EK.Certificate}
 	if bundle && len(result.EK.Chain) > 0 {
-		for _, cert := range result.EK.Chain {
-			if err := pem.Encode(os.Stdout, &pem.Block{
-				Type:  "CERTIFICATE",
-				Bytes: cert.Raw,
-			}); err != nil {
-				return fmt.Errorf("failed to encode chain certificate: %w", err)
-			}
-		}
+		certs = append(certs, result.EK.Chain...)
 	}
-
-	return nil
+	return displayCertsPEM(certs)
 }
 
 func displayText(result *tpm.EKResponse, short bool, bundle bool) error {
-	if err := displayCertText(result.EK.Certificate, short); err != nil {
-		return fmt.Errorf("failed to format certificate: %w", err)
-	}
-
+	certs := []*x509.Certificate{result.EK.Certificate}
 	if bundle && len(result.EK.Chain) > 0 {
-		for i, cert := range result.EK.Chain {
-			if err := displayCertText(cert, short); err != nil {
-				return fmt.Errorf("failed to format chain certificate %d: %w", i+1, err)
-			}
-			if i < len(result.EK.Chain)-1 {
-				fmt.Println()
-			}
-		}
+		certs = append(certs, result.EK.Chain...)
 	}
-
-	return nil
-}
-
-func displayCertText(cert *x509.Certificate, short bool) error {
-	var certText string
-	var err error
-
-	if short {
-		// We reimported the internal certinfo package to show more info
-		certText, err = internalcertinfo.CertificateTextShort(cert)
-	} else {
-		certText, err = certinfo.CertificateText(cert)
-	}
-
-	if err != nil {
-		return err
-	}
-
-	fmt.Println(certText)
-	return nil
+	return displayCertsText(certs, short)
 }
