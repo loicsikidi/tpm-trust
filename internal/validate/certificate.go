@@ -136,6 +136,10 @@ func (c *ekchecker) Check(cfg CheckConfig) error {
 				return fmt.Errorf("failed to download CRL from %q: %w", url, err)
 			}
 
+			c.logger.
+				WithField("url", url.String()).
+				Info("CRL downloaded")
+
 			if err := crl.Verify(issuers...); err != nil {
 				return fmt.Errorf("failed to verify CRL: %w", err)
 			}
@@ -238,6 +242,10 @@ func (c *ekchecker) getIssuerCertificates(cert *x509.Certificate) ([]*x509.Certi
 		if err != nil {
 			return nil, fmt.Errorf("failed to download issuer certificate: %w", err)
 		}
+
+		c.logger.
+			WithField("url", url.String()).
+			Info("certificate downloaded")
 
 		hash := sha256.Sum256(cert.Raw)
 		fingerprint := hex.EncodeToString(hash[:])
