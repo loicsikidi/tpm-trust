@@ -264,13 +264,8 @@ func (c *ekchecker) getIssuerCertificates(cert *x509.Certificate) ([]*x509.Certi
 }
 
 func (c *ekchecker) verifyCertificateWithIssuers(cert *x509.Certificate, issuers []*x509.Certificate) error {
-	// Get base verify options from trusted bundle
-	opts := c.tb.GetVerifyOptions()
-
-	// Check which issuers are missing and add them to the intermediates pool
-	certs := slices.Clone(issuers)
-
-	for _, issuer := range certs {
+	var missingIssuers []*x509.Certificate
+	for _, issuer := range issuers {
 		if !c.tb.Contains(issuer) {
 			if isSelfSigned(issuer) {
 				c.logger.WithField("subject", issuer.Subject.String()).
@@ -284,17 +279,10 @@ https://github.com/loicsikidi/tpm-ca-certificates/issues/new
 			}
 			c.logger.WithField("reason", `the certificate is not included in the trusted bundle`).
 				Infof("adding %q to verification pool", issuer.Subject.String())
-			opts.Intermediates.AddCert(issuer)
+			missingIssuers = append(missingIssuers, issuer)
 		}
 	}
-
-	// Copy the EK certificate and mark all critical extensions as handled
-	// to work around TPM-specific OIDs that x509 doesn't recognize
-	certCopy := *cert
-	certCopy.UnhandledCriticalExtensions = nil
-
-	_, err := certCopy.Verify(opts)
-	return err
+	return c.tb.Verify(cert, missingIssuers)
 }
 
 // isSelfSigned checks if a certificate is self-signed
