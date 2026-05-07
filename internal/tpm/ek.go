@@ -17,10 +17,10 @@ import (
 	"github.com/loicsikidi/attest"
 	"github.com/loicsikidi/attest/endorsement"
 	"github.com/loicsikidi/attest/info"
+	goutils "github.com/loicsikidi/go-utils"
 
 	"github.com/loicsikidi/tpm-trust/internal/log"
 	"github.com/loicsikidi/tpm-trust/internal/logutil"
-	"github.com/loicsikidi/tpm-trust/internal/util"
 )
 
 // httpClient is an interface for making HTTP requests, allowing test injection.
@@ -72,7 +72,7 @@ func (c *TPMConfig) CheckAndSetDefaults() error {
 
 	if c.KeyType != "" {
 		if !slices.Contains(validKeyTypes, c.KeyType) {
-			validTypes := util.Map(validKeyTypes, func(kt KeyType) string { return kt.String() })
+			validTypes := goutils.Map(validKeyTypes, func(kt KeyType) string { return kt.String() })
 			return fmt.Errorf("invalid key type: %s (must be one of: %s)", c.KeyType, strings.Join(validTypes, ", "))
 		}
 	}

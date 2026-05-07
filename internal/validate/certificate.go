@@ -1,24 +1,24 @@
 package validate
 
 import (
+	"bytes"
 	"context"
-	"crypto/sha256"
 	"crypto/x509"
-	"encoding/hex"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"slices"
 	"time"
 
 	"github.com/loicsikidi/attest/endorsement"
+	"github.com/loicsikidi/go-utils/crypto/x509util"
 	"github.com/loicsikidi/tpm-ca-certificates/pkg/apiv1beta"
 	"github.com/loicsikidi/tpm-trust/internal/log"
 )
 
 var (
 	ErrUntrustedCertificate = errors.New("EK certificate trust could not be established")
-	ErrCertificateRevoked   = errors.New("certificate is revoked")
 	ErrEKCannotBeCA         = errors.New("EK certificate cannot be a CA certificate")
 )
 
@@ -33,15 +33,20 @@ type Checker interface {
 	Check(cfg CheckConfig) error
 }
 
+type httpClient interface {
+	Do(req *http.Request) (*http.Response, error)
+}
+
 type ekchecker struct {
-	downloader *downloader
-	tb         apiv1beta.TrustedBundle
-	logger     log.Logger
+	verifier *x509util.CertVerifier
+	tb       apiv1beta.TrustedBundle
+	logger   log.Logger
+	timeout  time.Duration
 }
 
 type EKCheckerConfig struct {
-	Downloader    *downloader
 	TrustedBundle apiv1beta.TrustedBundle
+	HttpClient    httpClient
 	Timeout       time.Duration
 	Logger        log.Logger
 }
@@ -53,8 +58,8 @@ func (e *EKCheckerConfig) CheckAndSetDefaults() error {
 	if e.Timeout == 0 {
 		e.Timeout = 5 * time.Second
 	}
-	if e.Downloader == nil {
-		e.Downloader = newDefaultDownloader()
+	if e.HttpClient == nil {
+		e.HttpClient = http.DefaultClient
 	}
 	if e.TrustedBundle == nil {
 		ctx, cancel := context.WithTimeout(context.Background(), e.Timeout)
@@ -66,7 +71,6 @@ func (e *EKCheckerConfig) CheckAndSetDefaults() error {
 			return err
 		}
 	}
-	e.Downloader.timeout = e.Timeout
 	return nil
 }
 
@@ -74,10 +78,25 @@ func NewEKChecker(cfg EKCheckerConfig) (Checker, error) {
 	if err := cfg.CheckAndSetDefaults(); err != nil {
 		return nil, fmt.Errorf("invalid config: %w", err)
 	}
+
+	v, err := x509util.NewCertVerifier(x509util.VerifierConfig{
+		HttpClient: cfg.HttpClient,
+		AfterDownloadHook: func(url *url.URL, kind string) {
+			cfg.Logger.
+				WithField("url", url.String()).
+				Infof("%s downloaded", kind)
+		},
+		Cache: cfg.TrustedBundle,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create certificate verifier: %w", err)
+	}
+
 	return &ekchecker{
-		downloader: cfg.Downloader,
-		tb:         cfg.TrustedBundle,
-		logger:     cfg.Logger,
+		verifier: v,
+		tb:       cfg.TrustedBundle,
+		logger:   cfg.Logger,
+		timeout:  cfg.Timeout,
 	}, nil
 }
 
@@ -104,49 +123,25 @@ func (c *ekchecker) Check(cfg CheckConfig) error {
 		return err
 	}
 
-	var issuers []*x509.Certificate
-	if len(cfg.EK.Chain) > 0 {
-		issuers = cfg.EK.Chain
-		lastIdx := len(issuers) - 1
-		parent, err := c.getIssuerCertificates(issuers[lastIdx])
-		if err != nil {
-			return nil
-		}
-		issuers = append(issuers, parent...)
-	} else {
-		var err error
-		issuers, err = c.getIssuerCertificates(cfg.EK.Certificate)
-		if err != nil {
-			return err
-		}
+	v := c.verifier
+
+	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
+	defer cancel()
+	issuers, err := v.GetFullChain(ctx, cfg.EK.Certificate, cfg.EK.Chain)
+	if err != nil && !c.safeToContinue(cfg) {
+		c.logger.WithError(err).Debug("failed to get full chain")
+		return fmt.Errorf("failed to get full chain: %w", err)
 	}
 
 	if !cfg.SkipRevocationCheck {
-		crlUrls, err := c.prepareUrls(cfg.EK.Certificate.CRLDistributionPoints)
-		if err != nil {
-			return fmt.Errorf("failed to prepare CRL URLs: %w", err)
+		config := x509util.RevocationConfig{
+			Chain:     issuers,
+			FullChain: true,
 		}
-
-		for _, url := range crlUrls {
-			ctx, cancel := context.WithTimeout(context.Background(), c.downloader.timeout)
-			defer cancel()
-
-			crl, err := c.downloader.downloadCRL(ctx, url)
-			if err != nil {
-				return fmt.Errorf("failed to download CRL from %q: %w", url, err)
-			}
-
-			c.logger.
-				WithField("url", url.String()).
-				Info("CRL downloaded")
-
-			if err := crl.Verify(issuers...); err != nil {
-				return fmt.Errorf("failed to verify CRL: %w", err)
-			}
-
-			if crl.IsRevoked(cfg.EK.Certificate) {
-				return ErrCertificateRevoked
-			}
+		ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
+		defer cancel()
+		if err := v.Verify(ctx, cfg.EK.Certificate, config); err != nil {
+			return err
 		}
 	}
 
@@ -159,14 +154,8 @@ func (c *ekchecker) Check(cfg CheckConfig) error {
 }
 
 func (c *ekchecker) check(cfg *CheckConfig) error {
-	switch {
-	case cfg.EK.Certificate.IsCA:
+	if cfg.EK.Certificate.IsCA {
 		return ErrEKCannotBeCA
-	// an arbitrary limit, so that we don't start making a large number of HTTP requests (if needed)
-	case len(cfg.EK.Certificate.IssuingCertificateURL) > c.downloader.maxDownloads:
-		return fmt.Errorf("number of Issuers (%d) bigger than the maximum allowed number (%d) of downloads", len(cfg.EK.Certificate.CRLDistributionPoints), c.downloader.maxDownloads)
-	case !cfg.SkipRevocationCheck && len(cfg.EK.Certificate.CRLDistributionPoints) > c.downloader.maxDownloads:
-		return fmt.Errorf("number of CRLs (%d) bigger than the maximum allowed number (%d) of downloads", len(cfg.EK.Certificate.CRLDistributionPoints), c.downloader.maxDownloads)
 	}
 	if len(cfg.EK.Certificate.CRLDistributionPoints) == 0 {
 		c.logger.WithField("outcome", "revocation check will be skipped").Warn("missing CRL DP")
@@ -189,85 +178,11 @@ func (c *ekchecker) check(cfg *CheckConfig) error {
 	return nil
 }
 
-func (c *ekchecker) prepareUrls(urls []string) ([]*url.URL, error) {
-	var crlURLs []*url.URL
-	seen := make(map[string]bool)
-
-	for _, u := range urls {
-		parsedURL, err := url.Parse(u)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse CRL URL %q: %w", u, err)
-		}
-
-		// we only support HTTP protocols (at least for now)
-		if !slices.Contains([]string{"http", "https"}, parsedURL.Scheme) {
-			c.logger.WithField("scheme", parsedURL.Scheme).
-				WithField("endpoint", parsedURL.String()).
-				Warn("unsupported scheme: skipping")
-			continue
-		}
-
-		// skip duplicate URLs
-		urlStr := parsedURL.String()
-		if seen[urlStr] {
-			c.logger.WithField("endpoint", urlStr).
-				Debug("skipping duplicate URL")
-			continue
-		}
-		seen[urlStr] = true
-
-		crlURLs = append(crlURLs, parsedURL)
-	}
-	return crlURLs, nil
-}
-
-// getIssuerCertificates retrieves the issuer certificates for the EK certificates.
-// it's a strict function that expects to get all the issuer certificates
-//
-// TODO(lsikidi): support recursive issuer fetching for deeper chains
-func (c *ekchecker) getIssuerCertificates(cert *x509.Certificate) ([]*x509.Certificate, error) {
-	issuerUrls, err := c.prepareUrls(cert.IssuingCertificateURL)
-	if err != nil {
-		return nil, fmt.Errorf("failed to prepare issuer URLs: %w", err)
-	}
-
-	var issuers []*x509.Certificate
-	seen := make(map[string]bool)
-
-	for _, url := range issuerUrls {
-		ctx, cancel := context.WithTimeout(context.Background(), c.downloader.timeout)
-		defer cancel()
-
-		cert, err := c.downloader.downloadCRLSigner(ctx, url)
-		if err != nil {
-			return nil, fmt.Errorf("failed to download issuer certificate: %w", err)
-		}
-
-		c.logger.
-			WithField("url", url.String()).
-			Info("certificate downloaded")
-
-		hash := sha256.Sum256(cert.Raw)
-		fingerprint := hex.EncodeToString(hash[:])
-		if seen[fingerprint] {
-			c.logger.WithField("subject", cert.Subject.String()).
-				WithField("endpoint", url.String()).
-				WithField("fingerprint", fingerprint).
-				Debug("skipping duplicate certificate")
-			continue
-		}
-		seen[fingerprint] = true
-
-		issuers = append(issuers, cert)
-	}
-	return issuers, nil
-}
-
 func (c *ekchecker) verifyCertificateWithIssuers(cert *x509.Certificate, issuers []*x509.Certificate) error {
 	var missingIssuers []*x509.Certificate
 	for _, issuer := range issuers {
 		if !c.tb.Contains(issuer) {
-			if isSelfSigned(issuer) {
+			if x509util.IsRoot(issuer) {
 				c.logger.WithField("subject", issuer.Subject.String()).
 					WithField("reason", `unfortunately, the root certificate
 is not included yet in 'tpm-ca-certificates' 🥹
@@ -285,11 +200,19 @@ https://github.com/loicsikidi/tpm-ca-certificates/issues/new
 	return c.tb.Verify(cert, missingIssuers)
 }
 
-// isSelfSigned checks if a certificate is self-signed
-func isSelfSigned(cert *x509.Certificate) bool {
-	if !slices.Equal(cert.RawSubject, cert.RawIssuer) {
+func (c *ekchecker) safeToContinue(cfg CheckConfig) bool {
+	if !cfg.SkipRevocationCheck {
 		return false
 	}
 
-	return cert.CheckSignatureFrom(cert) == nil
+	candidate := cfg.EK.Certificate
+	if len(cfg.EK.Chain) > 0 {
+		lastIdx := len(cfg.EK.Chain) - 1
+		candidate = cfg.EK.Chain[lastIdx]
+	}
+
+	// Check if the candidate's issuer is in the trusted bundle
+	return c.tb.ContainsFunc(func(c *x509.Certificate) bool {
+		return bytes.Equal(c.RawSubject, candidate.RawIssuer)
+	})
 }

@@ -7,12 +7,12 @@ import (
 	"slices"
 	"time"
 
+	goutils "github.com/loicsikidi/go-utils"
 	"github.com/loicsikidi/tpm-ca-certificates/pkg/apiv1beta"
 	"github.com/loicsikidi/tpm-trust/internal"
 	"github.com/loicsikidi/tpm-trust/internal/logutil"
 	"github.com/loicsikidi/tpm-trust/internal/privilege"
 	"github.com/loicsikidi/tpm-trust/internal/tpm"
-	"github.com/loicsikidi/tpm-trust/internal/util"
 	"github.com/loicsikidi/tpm-trust/internal/validate"
 	"github.com/spf13/cobra"
 
@@ -54,7 +54,7 @@ Exit codes:
   ## Audit a specific key type
   tpm-trust audit rsa-2048`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			opts.keyType = util.OptionalArg(args)
+			opts.keyType = goutils.OptionalArg(args)
 			return run(cmd.Context(), opts)
 		},
 		Args:          cobra.MaximumNArgs(1),
