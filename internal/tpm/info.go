@@ -19,7 +19,7 @@ func Info(cfg TPMConfig) (*info.TPMInfo, error) {
 	defer logger.ResetPadding()
 
 	logger.Debug("open connection to TPM")
-	tpm, err := attest.OpenTPM()
+	tpm, err := attest.OpenTPM(attest.OpenConfig{Transport: cfg.TPM})
 	if err != nil {
 		return nil, fmt.Errorf("failed to open TPM: %w", err)
 	}

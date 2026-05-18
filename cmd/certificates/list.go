@@ -17,6 +17,11 @@ import (
 type listOptions struct {
 	verbose bool
 	format  string
+	tpm     tpmsimulator
+}
+
+func (o *listOptions) getSimulator() tpmsimulator {
+	return o.tpm
 }
 
 // Check validates the listOptions configuration.
@@ -65,8 +70,10 @@ func runList(_ context.Context, opts *listOptions) error {
 		return err
 	}
 
-	if err := privilege.Elevate(); err != nil {
-		return fmt.Errorf("failed to elevate privileges: %w", err)
+	if needsPrivileges(opts) {
+		if err := privilege.Elevate(); err != nil {
+			return fmt.Errorf("failed to elevate privileges: %w", err)
+		}
 	}
 
 	var logger log.Logger
@@ -79,7 +86,7 @@ func runList(_ context.Context, opts *listOptions) error {
 
 	logger.Info("Reading EK certificates from TPM")
 
-	result, err := tpm.GetEKCertificates(tpm.TPMConfig{Logger: logger})
+	result, err := tpm.GetEKCertificates(tpm.TPMConfig{Logger: logger, TPM: opts.tpm})
 	if err != nil {
 		return fmt.Errorf("failed to read EK certificates: %w", err)
 	}
@@ -103,18 +110,25 @@ type outputJSON struct {
 }
 
 func displayListJSON(result *tpm.EKCertsResponse) error {
-	output := outputJSON{
-		Certificates: make([]certificateJSON, 0, len(result.EKs)),
+	var length int
+	if result != nil {
+		length = len(result.EKs)
 	}
 
-	for _, ekInfo := range result.EKs {
-		cert := ekInfo.EK.Certificate
-		output.Certificates = append(output.Certificates, certificateJSON{
-			KeyType: string(ekInfo.KeyType),
-			Issuer:  cert.Issuer.String(),
-			Subject: cert.Subject.String(),
-			Chain:   ekInfo.EK.Chain,
-		})
+	output := outputJSON{
+		Certificates: make([]certificateJSON, 0, length),
+	}
+
+	if length > 0 {
+		for _, ekInfo := range result.EKs {
+			cert := ekInfo.EK.Certificate
+			output.Certificates = append(output.Certificates, certificateJSON{
+				KeyType: ekInfo.KeyType.String(),
+				Issuer:  cert.Issuer.String(),
+				Subject: cert.Subject.String(),
+				Chain:   ekInfo.EK.Chain,
+			})
+		}
 	}
 
 	encoder := json.NewEncoder(os.Stdout)
@@ -123,6 +137,11 @@ func displayListJSON(result *tpm.EKCertsResponse) error {
 }
 
 func displayListText(logger log.Logger, result *tpm.EKCertsResponse) error {
+	if result == nil || len(result.EKs) == 0 {
+		logger.Info("No EK certificates available")
+		return nil
+	}
+
 	logger.Info("Available EK certificates:")
 	logger.IncreasePadding()
 	for i, ekInfo := range result.EKs {

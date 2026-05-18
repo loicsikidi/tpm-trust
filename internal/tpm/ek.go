@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/google/go-tpm/tpm2"
+	"github.com/google/go-tpm/tpm2/transport"
 	"github.com/loicsikidi/attest"
 	"github.com/loicsikidi/attest/endorsement"
 	"github.com/loicsikidi/attest/info"
@@ -63,6 +64,8 @@ type TPMConfig struct {
 	KeyType KeyType
 	// If true, skip matching the public key during EK certificate search for faster operation
 	SkipPublicMatching bool
+	// Use only in tests
+	TPM transport.TPMCloser
 }
 
 func (c *TPMConfig) CheckAndSetDefaults() error {
@@ -108,7 +111,7 @@ func GetEKCertificates(cfg TPMConfig) (*EKCertsResponse, error) {
 	defer logger.DecreasePadding()
 
 	logger.Debug("open connection to TPM")
-	tpm, err := attest.OpenTPM()
+	tpm, err := attest.OpenTPM(attest.OpenConfig{Transport: cfg.TPM})
 	if err != nil {
 		return nil, fmt.Errorf("failed to open TPM: %w", err)
 	}
@@ -159,7 +162,7 @@ func SearchEKCertificate(cfg TPMConfig) (*EKResponse, error) {
 	defer logger.DecreasePadding()
 
 	logger.Debug("open connection to TPM")
-	tpm, err := attest.OpenTPM()
+	tpm, err := attest.OpenTPM(attest.OpenConfig{Transport: cfg.TPM})
 	if err != nil {
 		return nil, fmt.Errorf("failed to open TPM: %w", err)
 	}
@@ -359,7 +362,7 @@ func GetEKCertificate(cfg TPMConfig) (*EKResponse, error) {
 	defer logger.DecreasePadding()
 
 	logger.Debug("open connection to TPM")
-	tpm, err := attest.OpenTPM()
+	tpm, err := attest.OpenTPM(attest.OpenConfig{Transport: cfg.TPM})
 	if err != nil {
 		return nil, fmt.Errorf("failed to open TPM: %w", err)
 	}
