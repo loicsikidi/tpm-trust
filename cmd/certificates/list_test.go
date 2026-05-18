@@ -62,21 +62,31 @@ func TestListCommand(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Capture stdout
 			oldStdout := os.Stdout
-			r, w, _ := os.Pipe()
+			r, w, err := os.Pipe()
+			if err != nil {
+				t.Fatalf("failed to create pipe: %v", err)
+			}
 			os.Stdout = w
+			t.Cleanup(func() {
+				os.Stdout = oldStdout
+				_ = r.Close()
+				_ = w.Close()
+			})
 
-			err := runList(t.Context(), tt.getOpts(t))
+			err = runList(t.Context(), tt.getOpts(t))
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
 
-			// Restore stdout
-			w.Close()
-			os.Stdout = oldStdout
+			if err := w.Close(); err != nil {
+				t.Fatalf("failed to close stdout writer: %v", err)
+			}
 
 			// Read captured output
 			var buf bytes.Buffer
-			io.Copy(&buf, r)
+			if _, err := io.Copy(&buf, r); err != nil {
+				t.Fatalf("failed to read captured stdout: %v", err)
+			}
 			output := buf.String()
 
 			if tt.expect != "" && !strings.Contains(output, tt.expect) {
