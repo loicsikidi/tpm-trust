@@ -94,6 +94,7 @@ func run(ctx context.Context, opts *options) error {
 	logutil.LogDurationWithPadding(logger, startRead)
 
 	startLoad := time.Now()
+	logger.Info("Loading manufacturers trusted bundle")
 	cfg := apiv1beta.GetConfig{
 		AutoUpdate: apiv1beta.AutoUpdateConfig{
 			DisableAutoUpdate: true,
@@ -103,7 +104,6 @@ func run(ctx context.Context, opts *options) error {
 	if err != nil {
 		return fmt.Errorf("failed to get trusted bundle: %w", err)
 	}
-	logger.Info("Loading manufacturers trusted bundle")
 	logutil.LogWithPadding(logger, func() {
 		logger.Info("download and verify integrity")
 		logutil.LogDurationWithPadding(logger, startLoad)
@@ -129,10 +129,9 @@ func run(ctx context.Context, opts *options) error {
 		logger.Debugf("manufacturer's ASCII (bytes): %v", []byte(result.Manufacturer.ASCII))
 		logger.WithField("id", result.Manufacturer.ASCII).
 			WithField("reason", `unfortunately, this manufacturer
-	is not included yet in 'tpm-ca-certificates' 🥹
-	Please open an issue to request its inclusion:
-	https://github.com/loicsikidi/tpm-ca-certificates/issues/new
-	`).
+is not included yet in 'tpm-ca-certificates' 🥹
+Please open an issue to request its inclusion:
+https://github.com/loicsikidi/tpm-ca-certificates/issues/new`).
 			Error("unsupported manufacturer")
 		return internal.ErrSilence
 	}
