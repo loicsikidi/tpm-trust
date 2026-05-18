@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/google/go-tpm/tpm2/transport"
 	"github.com/loicsikidi/attest/info"
 	"github.com/loicsikidi/tpm-trust/internal/privilege"
 	"github.com/loicsikidi/tpm-trust/internal/tpm"
@@ -18,7 +17,11 @@ import (
 type listOptions struct {
 	verbose bool
 	format  string
-	tpm     transport.TPMCloser
+	tpm     tpmsimulator
+}
+
+func (o *listOptions) getSimulator() tpmsimulator {
+	return o.tpm
 }
 
 // Check validates the listOptions configuration.
@@ -67,8 +70,10 @@ func runList(_ context.Context, opts *listOptions) error {
 		return err
 	}
 
-	if err := privilege.Elevate(); err != nil {
-		return fmt.Errorf("failed to elevate privileges: %w", err)
+	if needsPrivileges(opts) {
+		if err := privilege.Elevate(); err != nil {
+			return fmt.Errorf("failed to elevate privileges: %w", err)
+		}
 	}
 
 	var logger log.Logger
