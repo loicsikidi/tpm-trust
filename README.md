@@ -1,3 +1,5 @@
+![Banner](./static/banner.svg)
+
 # tpm-trust
 
 ![go version](https://img.shields.io/github/go-mod/go-version/loicsikidi/tpm-trust)
