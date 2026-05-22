@@ -1,7 +1,5 @@
 ![Banner](./static/banner.svg)
 
-# tpm-trust
-
 ![go version](https://img.shields.io/github/go-mod/go-version/loicsikidi/tpm-trust)
 [![latest](https://img.shields.io/github/v/release/loicsikidi/tpm-trust)](https://github.com/loicsikidi/tpm-trust/releases)
 [![license](https://img.shields.io/badge/license-BSD--3--Clause-blue?style=flat-square)](https://raw.githubusercontent.com/loicsikidi/tpm-trust/main/LICENSE)
