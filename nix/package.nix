@@ -4,6 +4,7 @@
   buildGo125Module,
   fetchFromGitHub,
   installShellFiles,
+  openssl,
   src ? null,
 }: let
   version =
@@ -26,7 +27,12 @@ in
           hash = "sha256-lusfsuUrXZvIbXoiDAOvU8PanbUsMB6eaE2/ARBvybo=";
         };
 
-    vendorHash = "sha256-xDDm5iuYRxgnI9obI1/jNZSS3lxBX02ucdLFx9U+0V4=";
+    # Needed for github.co/google/go-tpm-tools/simulator which contains non-go files that `go mod vendor` strips
+    proxyVendor = true;
+    vendorHash = "sha256-KMTaVavML18oQeSAnZZaCj4nF/7sw9oLegaBQrb9HOI=";
+
+    # Required to use go-tpm-tools/simulator which depends on OpenSSL
+    buildInputs = [openssl];
 
     # Build the main package (at the root)
     # subPackages defaults to [ "." ] if not specified
