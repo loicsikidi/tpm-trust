@@ -1,0 +1,82 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+#
+# CodeRabbit configuration
+# --------------------------------------------------------------------------
+# Goal: disable auto-review for PRs originating from the following branches:
+#   - nix/**
+#   - chore/bump/**
+#   - docs/**
+#
+# Note: CodeRabbit does not natively support filtering by SOURCE branch in
+# its schema. `base_branches` filters the target branch, not the source.
+# We therefore rely on two complementary mechanisms:
+#   1) ignore_title_keywords: matches against the PR title
+#      (works when your PR titles carry the branch prefix,
+#       e.g. "nix/update-flake: bump nixpkgs")
+#   2) labels: exclusion via a negative label "skip-coderabbit" that you
+#      can apply manually or through a GitHub Action triggered on push.
+# --------------------------------------------------------------------------
+
+language: en-US
+early_access: false
+
+reviews:
+  profile: chill
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: true
+
+  auto_review:
+    # Auto-review is enabled by default, except for the exclusions below.
+    enabled: true
+    auto_incremental_review: true
+    drafts: false
+
+    # 1) Exclude PRs by title keyword (case-insensitive).
+    #    Covers common conventions where the PR title starts with the
+    #    branch prefix.
+    ignore_title_keywords:
+      - "nix/"
+      - "chore/bump/"
+      - "chore(bump)"
+      - "chore(deps)"
+      - "docs/"
+      - "docs:"
+      - "[docs]"
+      - "[nix]"
+      - "[bump]"
+
+    # 2) Exclude PRs by negative label. If a PR carries this label,
+    #    it will not be reviewed. Works well combined with an Action
+    #    that applies the label automatically based on the branch name.
+    labels:
+      - "!skip-coderabbit"
+      - "!skip-review"
+      - "!automated"
+
+    # 3) Bots / automated users to ignore (e.g. dependabot, renovate,
+    #    which typically push to chore/bump/* branches).
+    ignore_usernames:
+      - "dependabot[bot]"
+      - "renovate[bot]"
+      - "github-actions[bot]"
+
+  # Exclude from review the files typically touched on these branches
+  # (lockfiles, generated nix files, docs build artifacts).
+  path_filters:
+    - "!**/flake.lock"
+    - "!**/*.lock"
+    - "!**/package-lock.json"
+    - "!**/pnpm-lock.yaml"
+    - "!**/yarn.lock"
+    - "!**/Cargo.lock"
+    - "!**/go.sum"
+
+  abort_on_close: true
+
+chat:
+  auto_reply: true
+
+knowledge_base:
+  opt_out: false
