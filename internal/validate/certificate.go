@@ -173,7 +173,7 @@ func (c *ekchecker) check(cfg *CheckConfig) error {
 		}
 	}
 	if !found {
-		return fmt.Errorf("EK certificate does not contain the required EK OID in Extended Key Usage")
+		c.logger.Warn("certificate is missing EK Extended Key Usage (2.23.133.8.1)")
 	}
 	return nil
 }
