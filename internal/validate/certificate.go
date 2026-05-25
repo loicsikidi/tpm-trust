@@ -65,7 +65,7 @@ func (e *EKCheckerConfig) CheckAndSetDefaults() error {
 		ctx, cancel := context.WithTimeout(context.Background(), e.Timeout)
 		defer cancel()
 		var err error
-		cfg := apiv1beta.GetConfig{AutoUpdate: apiv1beta.AutoUpdateConfig{DisableAutoUpdate: true}}
+		cfg := apiv1beta.GetConfig{AutoUpdate: apiv1beta.AutoUpdateConfig{Disabled: true}}
 		e.TrustedBundle, err = apiv1beta.GetTrustedBundle(ctx, cfg)
 		if err != nil {
 			return err
