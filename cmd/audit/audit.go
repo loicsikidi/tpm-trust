@@ -97,7 +97,7 @@ func run(ctx context.Context, opts *options) error {
 	logger.Info("Loading manufacturers trusted bundle")
 	cfg := apiv1beta.GetConfig{
 		AutoUpdate: apiv1beta.AutoUpdateConfig{
-			DisableAutoUpdate: true,
+			Disabled: true,
 		},
 	}
 	trustedBundle, err := apiv1beta.GetTrustedBundle(ctx, cfg)
