@@ -1,6 +1,6 @@
 module github.com/loicsikidi/tpm-trust
 
-go 1.25.7
+go 1.25.8
 
 require (
 	github.com/caarlos0/go-version v0.2.2
