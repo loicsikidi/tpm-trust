@@ -8,7 +8,7 @@ require (
 	github.com/google/go-tpm v0.9.8
 	github.com/loicsikidi/attest v0.6.0
 	github.com/loicsikidi/go-tpm-kit v0.6.2
-	github.com/loicsikidi/go-utils v0.4.0
+	github.com/loicsikidi/go-utils v0.4.1
 	github.com/loicsikidi/tpm-ca-certificates v0.11.2
 	github.com/smallstep/certinfo v1.15.0
 	github.com/spf13/cobra v1.10.2

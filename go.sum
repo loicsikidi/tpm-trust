@@ -270,8 +270,8 @@ github.com/loicsikidi/attest v0.6.0 h1:CYTd/pNtnSQafBTyugWD7Q/Naw8JbQcoSSVV9b1eM
 github.com/loicsikidi/attest v0.6.0/go.mod h1:hJ1GsqG7Pna34JUc2RRCBX0PgCni4m/wuaX9BKKGLfA=
 github.com/loicsikidi/go-tpm-kit v0.6.2 h1:rOgUPZuuyANPmmSEAdd8I6+JhC7/caoMbQbfuvgRnHc=
 github.com/loicsikidi/go-tpm-kit v0.6.2/go.mod h1:uiscYWIYEyAeTUFVqR2+BpSVsahHfscwevwq9jw34lE=
-github.com/loicsikidi/go-utils v0.4.0 h1:wGrrIixujOTzy+2ucq2LWd5MXPAQ/p+cpNPXzucDlo8=
-github.com/loicsikidi/go-utils v0.4.0/go.mod h1:X/r13jNC33jGachqUxrSPw6LkirfTRh1traFLmpxxzc=
+github.com/loicsikidi/go-utils v0.4.1 h1:5XV5ZZhuvzVYNaxiZgy1kfVa2VOTBujz3F0W9vauEzc=
+github.com/loicsikidi/go-utils v0.4.1/go.mod h1:X/r13jNC33jGachqUxrSPw6LkirfTRh1traFLmpxxzc=
 github.com/loicsikidi/tpm-ca-certificates v0.11.2 h1:ItIFerGKR/aHOBvH5gD/QrXBHHKhgTejqYdHLfvmixc=
 github.com/loicsikidi/tpm-ca-certificates v0.11.2/go.mod h1:Gn26A58LI3F/5rrkmA4Miwn3QC+ZTcvUe1a8954UNHA=
 github.com/lucasb-eyer/go-colorful v1.3.0 h1:2/yBRLdWBZKrf7gB40FoiKfAWYQ0lqNcbuQwVHXptag=
